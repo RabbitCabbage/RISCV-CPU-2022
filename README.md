@@ -1,3 +1,11 @@
+# Rabbit Cabbage's Jigsaw Puzzle CPU
+This is a jigsaw puzzle toy for Rabbit Cabbage.
+The toy is named "Tomasulo CPU", and there are blocks named ==RAM, I-Cache, I-Fetch, Decoder, RS, ALU, ROB and LSB.==
+Cabbage must create the pieces of blocks and build the puzzle blocks together.
+Frank Qiu asked Cabbage to create I-Fetch first, but Cabbage was confused.
+So Cabbage decided to design the connecting parts of the blocks in the first step.
+Cabbage found it hard to connect the blocks together.
+
 # <img src="/README.assets/cpu.png" width="40" align=center /> RISCV-CPU 2022
 
 ## 引言
