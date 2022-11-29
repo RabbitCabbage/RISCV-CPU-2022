@@ -1,11 +1,17 @@
 `define ICSIZE 511:0 //ICache的大小
-`define ICINDEX 10:2
-`define ICTAG 17:11
+`define ICINDEX 7:0
+`define ICTAG 31:8
 `define INSTRLEN 5:0 //Instruction的长度
 `define ADDR 31:0//地址的长度是32位
+`define DATALEN 31:0//表示的是最长情况下的数据，32位
 `define BYTELEN 7:0
 `define READ 1'b0
 `define WRITE 1'b1
+`define LSBINSTRLEN 2:0// 表示的是一次lsb到mem的操作有可能32位、16位或者8位，分别用3、2、1来表示
+`define REQUIRE32 3'100//跟memctrl中的finished相对应，表示的是需要的位数，在lsb发命令的时候也用这个规定。
+·define REQUIRE24 3'011
+`define REQUIRE16 3'010
+`define REQUIRE8 3'001
 `define REGSIZE 31:0//寄存器个数有32个
 `define REGLINE 31:0//每一个寄存器也有32位
 `define REGINDEX 5:0//总共有32个寄存器，因此寄存器下标0~31，用6位即可
