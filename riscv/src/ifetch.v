@@ -20,7 +20,7 @@ module IF(
     // if lsb or rob is full, then fetching should be stalled
     input wire stall_IF;
     output wire [`INSTRLEN] instr_to_decode,
-    output wire decoder_enable,
+    output wire IF_success,
 
     // from predictor
     input wire is_jump_instr,
@@ -32,7 +32,8 @@ reg [`ADDR] pc;
 always @(posedge clk) begin
     if (rst) begin
         icache_enable <= `FALSE;
-        pc_to_fetch <= NULL32;
+        pc_to_fetch <= `NULL32;
+        pc <= `NULL32;
     end
     if(rdy==`TRUE && stall_IF==`FALSE) begin
         if(jump_wrong==`TRUE) begin
@@ -49,7 +50,7 @@ always @(posedge clk) begin
         icahce_enable <= `TRUE;
         if(icache_success ==`TRUE) begin
             instr_to_decode <= instr_fetched;
-            decoder_enable <= `TRUE;
+            IF_success <= `TRUE;
         end
     end
 end

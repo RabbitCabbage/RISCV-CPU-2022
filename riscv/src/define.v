@@ -17,7 +17,10 @@
 `define REGINDEX 5:0//总共有32个寄存器，因此寄存器下标0~31，用6位即可
 `define IMMLEN 31:0//立即数的长度
 `define RSSIZE 31:0//RS的大小，RS的标号用来rename用这条指令作为结果的寄存器
-`define OPLEN 31:0//判断一个计算指令类型的长度
+`define OPLEN 5:0//判断一个计算指令类型的长度
+`define OPCODE 6:0
+`define FUNC3 14:12
+`define FUNC7 31:25
 `define TRUE 1'b1
 `define FALSE 1'b0
 //用于reset
@@ -67,8 +70,4 @@
 `define BGEU 6'd37
 `define JAL 6'd48
 `define JALR 6'd49
-`define JALOP 7'd111
-`define JALROP 7'd103
-`define LUIOP 7'd55
-`define AUIPCOP 7'd23
-`define BRANCHOP 7'd99
+
