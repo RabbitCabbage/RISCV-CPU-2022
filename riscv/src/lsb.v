@@ -8,7 +8,7 @@ module LSB(
     input wire [`ADDR]addr,//如果是l/s指令，则要传进来一个addr
     input wire [`OPLEN] op,
     // from ALU get the result
-    input wire [`REGLINE] result,
+    input wire [`DATALEN] result,
     
     // to RS the updated reg
     output wire [`REGINDEX] updated_reg_index,

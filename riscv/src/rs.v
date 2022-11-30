@@ -34,8 +34,8 @@ module RS(
 
     output wire alu_enable,
     output wire [`ROBINDEX] to_alu_rd_renaming,
-    output wire [`REGLINE] to_alu_rs1_value,
-    output wire [`REGLINE] to_alu_rs2_value,
+    output wire [`DATALEN] to_alu_rs1_value,
+    output wire [`DATALEN] to_alu_rs2_value,
     output wire [`OPLEN] to_alu_op,
     output wire [`IMMLEN] to_alu_imm,
     output wire [`ADDR] to_alu_pc,

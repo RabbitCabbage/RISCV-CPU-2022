@@ -8,7 +8,7 @@ module ROB(
     input wire [`REGINDEX] rd,//如果是向寄存器内写，rd表示的是目标寄存器
     input wire [`OPLEN] op,
     // from ALU get the result
-    input wire [`REGLINE] result,
+    input wire [`DATALEN] result,
     
     // to RS the updated reg
     output wire [`REGINDEX] updated_reg_index,
