@@ -16,7 +16,14 @@
 `define REGLINE 31:0//每一个寄存器也有32位
 `define REGINDEX 5:0//总共有32个寄存器，因此寄存器下标0~31，用6位即可
 `define IMMLEN 31:0//立即数的长度
-`define RSSIZE 31:0//RS的大小，RS的标号用来rename用这条指令作为结果的寄存器
+`define RSSIZE 15:0//RS的大小，RS的标号用来rename用这条指令作为结果的寄存器
+`define RSINDEX 4:0//表示的是从0到15是可以使用的RS,16就表示没有符合标准 的，比如没有free或者没有ready
+`define RSNOTFOUND 5'16
+`define ROBSIZE 15:0
+`define ROBINDEX 4:0
+`define ROBNOTRENAME 5'16 
+`define LSBSIZE 15:0
+`define LSBRENAME 3:0
 `define OPLEN 5:0//判断一个计算指令类型的长度
 `define OPCODE 6:0
 `define FUNC3 14:12
