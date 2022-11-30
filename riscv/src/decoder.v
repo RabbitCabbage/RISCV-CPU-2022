@@ -14,7 +14,6 @@ module Decoder(
 
     //raw information decoded
     // to RS
-    input wire stall_RS,
     output wire decode_success,// after decoding it requires rs to add the instr.
     output reg [`ROBINDEX] to_rs_rs1_rename,
     output reg [`ROBINDEX] to_rs_rs2_rename,
@@ -86,7 +85,7 @@ assign rs2_rename = (reg_rs2_busy==`FALSE)?`ROBNOTRENAME:(rob_rs2_ready==`TRUE)?
 always @(*) begin
     //rst has nothing on this module, because this module has nothing stored in itself.
 
-    if(rdy==`TRUE && IF_success==`TRUE && stall_RS==`FALSE) begin
+    if(rdy==`TRUE && IF_success==`TRUE) begin
         decode_success <= `TRUE;
         case(instr[`OPCODE])
             7'0000011: begin

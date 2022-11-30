@@ -25,7 +25,6 @@ module IF(
     // from predictor
     input wire is_jump_instr,
     input wire jump_prediction,
-    input wire[`ADDR] predict_jump_pc,
     //表示的是上一个指令是否是跳转指令，以及predict是否跳转
 )
 reg [`ADDR] pc;
