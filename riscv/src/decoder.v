@@ -54,9 +54,10 @@ module Decoder(
     input wire rob_rs1_ready,
     input wire [`DATALEN] rob_fetch_rs2_value,
     input wire rob_rs2_ready,
-    output reg[`ROBINDEX] rob_fetch_rs1_index,
-    output reg[`ROBINDEX] rob_fetch_rs2_index,
-    output reg[`OPLEN] to_rob_op
+    output reg [`ROBINDEX] rob_fetch_rs1_index,
+    output reg [`ROBINDEX] rob_fetch_rs2_index,
+    output reg [`OPLEN] to_rob_op,
+    output reg [`REGINDEx] to_rob_destination_reg_index,
 )
 
 //记下decode的结果
@@ -100,12 +101,13 @@ always @(*) begin
                 rd <= instr[11:7];
                 imm <= {{21{instr[31]}},instr[30:20]};
                 //把得到的结果传给lsb
-                to_rs_op <= op;
+                to_rob_op <= op;
                 to_lsb_op <= op;
                 to_lsb_imm <= imm;
                 to_lsb_rd_rename <= rob_free_tag;
                 to_lsb_rs1_value <= rs1_value;
                 to_lsb_rs1_rename <= rs1_rename;
+                to_rob_destination_reg_index <= rd;
             end
             7'0010011: begin
                 case(instr[`FUNC3])
@@ -133,6 +135,7 @@ always @(*) begin
                 to_rs_rs1_rename <= rs1_rename;
                 to_rs_rs1_value <= rs1_value;
                 to_rs_rd_rename <= rob_free_tag;
+                to_rob_destination_reg_index <= rd;
             end
             7'0010111: begin
                 op <= `AUIPC;
@@ -142,6 +145,7 @@ always @(*) begin
                 to_rs_imm <= imm;
                 to_rs_op <= op;
                 to_rob_op <= op;
+                to_rob_destination_reg_index <= rd;
             end
             7'0100011: begin
                 case(instr[`FUNC3])
@@ -152,7 +156,7 @@ always @(*) begin
                 rs1 <= instr[19:15];
                 rs2 <= instr[24:20];
                 imm <= {{21{instr[31]}},instr[30:25],instr[11:7]};
-                o_rs_op <= op;
+                to_rob_op <= op;
                 to_lsb_op <= op;
                 to_lsb_imm <= imm;
                 to_lsb_rs1_value <= rs1_value;
@@ -190,6 +194,7 @@ always @(*) begin
                 to_rs_rename <= rob_free_tag;
                 to_rs_op <= op;
                 to_rob_op <= op;
+                to_rob_destination_reg_index <= rd;
             end
             7'0110111: begin
                 op <= `LUI;
@@ -199,6 +204,7 @@ always @(*) begin
                 to_rob_op <= op;
                 to_rs_op <= op;
                 to_rs_rd_rename <= rob_free_tag;
+                to_rob_destination_reg_index <= rd;
             end
             7'1100011: begin
                 case(instr[`FUNC3]):
@@ -231,6 +237,7 @@ always @(*) begin
                 to_rs_imm <= imm;
                 to_rs_op <= op;
                 to_rob_op <= op;
+                to_rob_destination_reg_index <= rd;
             end
             7'1101111: begin
                 op <= `JAL;
@@ -240,6 +247,7 @@ always @(*) begin
                 to_rs_imm <= imm;
                 to_rs_op <= op;
                 to_rob_op <= op;
+                to_rob_destination_reg_index <= rd;
             end
          endcase
     end else begin

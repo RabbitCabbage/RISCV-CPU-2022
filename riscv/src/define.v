@@ -22,7 +22,7 @@
 `define ROBINDEX 4:0
 `define ROBNOTRENAME 5'16 
 `define LSBSIZE 15:0
-`define LSBRENAME 3:0
+`define LSBINDEX 4:0
 `define OPLEN 5:0//判断一个计算指令类型的长度
 `define OPCODE 6:0
 `define FUNC3 14:12

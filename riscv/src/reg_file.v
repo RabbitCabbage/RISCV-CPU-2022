@@ -5,21 +5,24 @@ module RegFile(
     input wire rst,
     input wire rdy,
 
-    // from RS
-    input wire [`REGINDEX] rs1,
-    input wire [`REGINDEX] rs2,
-    input wire rs1_ready,
-    input wire rs2_ready,
-    // to ALU
-    output wire [`DATALEN] rs1_value,
-    output wire [`DATALEN] rs2_value,
+    //interact with decoder
+    input wire [`REGINDEX] from_decoder_rs1_index,
+    input wire [`REGINDEX] from_decoder_rs2_index,
+    input wire [`ROBINDEX] decoder_rd_rename,
+    output wire rs1_busy,
+    output wire rs2_busy,
+    output reg [`DATALEN] to_decoder_rs1_value,
+    output reg [`DATALEN] to_decoder_rs2_value,
+    output reg [`ROBINDEX] to_decoder_rs1_rename,
+    output reg [`ROBINDEX] to_decoder_rs2_rename,
+
     // from ROB
-    input wire jump_wrong,
-    input wire [`REGINDEX] updated_index,
-    input wire [`DATALEN] updated_value,
+    input wire [`REGINDEX] rob_update_index,
+    input wire [`ROBINDEX] rob_update_rename,
+    input wire [`DATALEN] rob_updated_value,
 )
-reg [`REGSIZE] reg_value [`DATALEN];
-reg [`REGSIZE] reg_status;
-reg [`REGSIZE] reg_is_renamed;
-reg [`REGSIZE] reg_rename [`RSSIZE]//用RS的标号来rename用这条指令作为结果的寄存器
+reg [`DATALEN] reg_value [`REGSIZE];
+reg reg_status[`REGSIZE];
+reg busy[`REGSIZE];
+reg [`ROBINDEX] reg_rename [`REGSIZE]//用RS的标号来rename用这条指令作为结果的寄存器
 endmodule
