@@ -1,0 +1,12 @@
+{
+    "verilog.linting.path": "/usr/bin/verilator",
+    "verilog.languageServer.pathSvls": "svls",
+    "verilog.linting.linter": "verilator",
+    "verilog.linting.verilator.useWSL": true,
+    "svls-vscode.svlintToml.path": "",
+    "svls-vscode.svlsBinary.path": "D:\\svls\\svls-v0.2.6-x86_64-win\\target\\x86_64-pc-windows-msvc\\release\\svls.exe",
+    "verilog.languageServer.enabled": false,
+    "systemverilogFormatter.veribleBuild": "win64",
+    "systemverilogFormatter.commandLineArguments": "--column_limit=300 --indentation_spaces=2 --assignment_statement_alignment=align --named_port_alignment=align  --port_declarations_alignment=align --module_net_variable_alignment=align ",
+    "verilog.ctags.path": ""
+}

@@ -1,32 +1,42 @@
-`define ICSIZE 511:0 //ICache的大小
+`define ICSIZE 255:0 //ICache的大小
+`define ICSIZESCALAR 256
 `define ICINDEX 7:0
 `define ICTAG 31:8
-`define INSTRLEN 5:0 //Instruction的长度
+`define INSTRLEN 31:0 //Instruction的长度
 `define ADDR 31:0//地址的长度是32位
 `define DATALEN 31:0//表示的是最长情况下的数据，32位
 `define BYTELEN 7:0
 `define READ 1'b0
 `define WRITE 1'b1
 `define LSBINSTRLEN 2:0// 表示的是一次lsb到mem的操作有可能32位、16位或者8位，分别用3、2、1来表示
-`define REQUIRE32 3'100//跟memctrl中的finished相对应，表示的是需要的位数，在lsb发命令的时候也用这个规定。
-·define REQUIRE24 3'011
-`define REQUIRE16 3'010
-`define REQUIRE8 3'001
+`define REQUIRE32 3'b100//跟memctrl中的finished相对应，表示的是需要的位数，在lsb发命令的时候也用这个规定。
+`define REQUIRE24 3'b011
+`define REQUIRE16 3'b010
+`define REQUIRE8 3'b001
 `define REGSIZE 31:0//寄存器个数有32个
-`define REGINDEX 5:0//总共有32个寄存器，因此寄存器下标0~31，用6位即可
+`define REGINDEX 4:0//总共有32个寄存器，因此寄存器下标0~31，用5位即可
 `define IMMLEN 31:0//立即数的长度
 `define RSSIZE 15:0//RS的大小，RS的标号用来rename用这条指令作为结果的寄存器
 `define RSINDEX 4:0//表示的是从0到15是可以使用的RS,16就表示没有符合标准 的，比如没有free或者没有ready
-`define RSNOTFOUND 5'16
+`define RSNOTFOUND 16
 `define ROBSIZE 15:0
+`define ROBSIZESCALAR 16
+`define RSSIZESCALAR 16
+`define REGSIZESCALAR 32
+`define LSBSIZESCALAR 16
+`define ROBPOINTER 3:0
 `define ROBINDEX 4:0
-`define ROBNOTRENAME 5'16 
+`define ROBNOTRENAME 16 
+`define LSBNOTRENAME 16
 `define LSBSIZE 15:0
 `define LSBINDEX 4:0
+`define LSBPOINTER 3:0
 `define OPLEN 5:0//判断一个计算指令类型的长度
-`define OPCODE 6:0
+`define OPCODE 6:0//是decoder中的opode所在的地方
 `define FUNC3 14:12
 `define FUNC7 31:25
+`define PREDICTORINDEX 7:0
+`define PREDICTORHASH 9:2
 `define TRUE 1'b1
 `define FALSE 1'b0
 //用于reset
@@ -76,4 +86,3 @@
 `define BGEU 6'd37
 `define JAL 6'd48
 `define JALR 6'd49
-

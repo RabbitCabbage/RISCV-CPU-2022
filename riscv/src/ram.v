@@ -1,4 +1,4 @@
-`include "define.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
 
 module RAM
 #(

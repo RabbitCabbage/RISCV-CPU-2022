@@ -1,18 +1,18 @@
 // RISCV32I CPU top module
 // port modification allowed for debugging purposes
-`include "define.v"
-`include "alu.v"
-`include "decoder.v"
-`include "icache.v"
-`include "ifetch.v"
-`include "hci.v"
-`include "lsb.v"
-`include "mem_ctrl.v"
-`include "ram.v"
-`include "reg_file.v"
-`include "riscv_top.v"
-`include "rob.v"
-`include "rs.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/alu.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/decoder.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/icache.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/ifetch.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/hci.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/lsb.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/mem_ctrl.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/ram.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/reg_file.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/riscv_top.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/rob.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/rs.v"
 module cpu(
   input  wire                 clk_in,			// system clock signal
   input  wire                 rst_in,			// reset signal
@@ -39,141 +39,254 @@ module cpu(
 // - 0x30000 write: write a byte to output (write 0x00 is ignored)
 // - 0x30004 read: read clocks passed since cpu starts (in dword, 4 bytes)
 // - 0x30004 write: indicates program stop (will output '\0' through uart tx)
-wire jump_wrong_from_rob;
-wire [`ADDR] jumping_pc_from_rob;
-wire ifetch_enable_icache;
-wire [`ADDR] ifetch_pc;
-wire [`INSTRLEN] icache_instr_to_if;
-wire icache_success;
-wire RS_full;
-wire ROB_full;
-wire LSB_full;
-wire stall_IF;
-assign stall_IF = (ROB_full||RS_full||LSB_full);
-wire [`INSTRLEN] if_instr_to_decoder;
-wire IF_success;
-wire is_jump_instr;
-wire jump_prediction;
 
-IF ifetch(
-  .clk(clk_in),.rst(rst_in),.rdy(rdy_in),
-  .jump_wrong(jump_wrong_from_rob),.jump_pc(jumping_pc_from_rob),
-  .icache_enable(ifetch_enable_icache),.pc_to_fetch(ifetch_pc),.instr_fetched(icache_instr_to_if),.icache_success(icache_success),
-  .stall_IF(stall_IF),.instr_to_decode(if_instr_to_decoder),.IF_success(IF_success),
-  .is_jump_instr(is_jump_instr),.jump_prediction(jump_prediction)
-);
+  ICache inst_ICache
+    (
+      .clk               (clk),
+      .rst               (rst),
+      .rdy               (rdy),
+      .stall_IF          (stall_IF),
+      .require_addr      (require_addr),
+      .IF_instr          (IF_instr),
+      .fetch_success     (fetch_success),
+      .mem_instr         (mem_instr),
+      .mem_addr          (mem_addr),
+      .mem_enable        (mem_enable),
+      .mem_fetch_success (mem_fetch_success)
+    );
+  IF inst_IF
+    (
+      .clk             (clk),
+      .rst             (rst),
+      .rdy             (rdy),
+      .jump_wrong      (jump_wrong),
+      .jump_pc         (jump_pc),
+      .icache_enable   (icache_enable),
+      .pc_to_fetch     (pc_to_fetch),
+      .instr_fetched   (instr_fetched),
+      .icache_success  (icache_success),
+      .stall_IF        (stall_IF),
+      .instr_to_decode (instr_to_decode),
+      .IF_success      (IF_success),
+      .is_jump_instr   (is_jump_instr),
+      .jump_prediction (jump_prediction)
+    );
+      MemCtrl inst_MemCtrl
+    (
+      .clk                (clk),
+      .rdy                (rdy),
+      .rst                (rst),
+      .clr                (clr),
+      .lsb_write_signal   (lsb_write_signal),
+      .lsb_read_signal    (lsb_read_signal),
+      .lsb_addr           (lsb_addr),
+      .lsb_len            (lsb_len),
+      .lsb_write_data     (lsb_write_data),
+      .lsb_read_data      (lsb_read_data),
+      .lsb_success        (lsb_success),
+      .icache_addr        (icache_addr),
+      .icache_read_signal (icache_read_signal),
+      .icache_read_instr  (icache_read_instr),
+      .icache_success     (icache_success),
+      .io_buffer_full     (io_buffer_full),
+      .mem_addr           (mem_addr),
+      .mem_byte_write     (mem_byte_write),
+      .mem_byte_read      (mem_byte_read),
+      .read_write         (read_write)
+    );
+  Decoder inst_Decoder
+    (
+      .clk                          (clk),
+      .rst                          (rst),
+      .rdy                          (rdy),
+      .IF_success                   (IF_success),
+      .instr                        (instr),
+      .fetch_pc                     (fetch_pc),
+      .decode_success               (decode_success),
+      .to_rs_rs1_rename             (to_rs_rs1_rename),
+      .to_rs_rs2_rename             (to_rs_rs2_rename),
+      .to_rs_rd_rename              (to_rs_rd_rename),
+      .to_rs_imm                    (to_rs_imm),
+      .to_rs_rs1_value              (to_rs_rs1_value),
+      .to_rs_rs2_value              (to_rs_rs2_value),
+      .to_rs_op                     (to_rs_op),
+      .decode_pc                    (decode_pc),
+      .to_lsb_rs1_rename            (to_lsb_rs1_rename),
+      .to_lsb_rs2_rename            (to_lsb_rs2_rename),
+      .to_lsb_rd_rename             (to_lsb_rd_rename),
+      .to_lsb_rs1_value             (to_lsb_rs1_value),
+      .to_lsb_rs2_value             (to_lsb_rs2_value),
+      .to_lsb_imm                   (to_lsb_imm),
+      .to_lsb_op                    (to_lsb_op),
+      .from_reg_rs1_rob_rename      (from_reg_rs1_rob_rename),
+      .from_reg_rs2_rob_rename      (from_reg_rs2_rob_rename),
+      .reg_rs1_value                (reg_rs1_value),
+      .reg_rs2_value                (reg_rs2_value),
+      .reg_rs1_busy                 (reg_rs1_busy),
+      .reg_rs2_busy                 (reg_rs2_busy),
+      .to_reg_rs1_index             (to_reg_rs1_index),
+      .to_reg_rs2_index             (to_reg_rs2_index),
+      .to_reg_rd_rename             (to_reg_rd_rename),
+      .rob_free_tag                 (rob_free_tag),
+      .to_rob_rd_rename             (to_rob_rd_rename),
+      .rob_fetch_rs1_value          (rob_fetch_rs1_value),
+      .rob_rs1_ready                (rob_rs1_ready),
+      .rob_fetch_rs2_value          (rob_fetch_rs2_value),
+      .rob_rs2_ready                (rob_rs2_ready),
+      .rob_fetch_rs1_index          (rob_fetch_rs1_index),
+      .rob_fetch_rs2_index          (rob_fetch_rs2_index),
+      .to_rob_op                    (to_rob_op),
+      .to_rob_destination_reg_index (to_rob_destination_reg_index)
+    );
+  RS inst_RS
+    (
+      .clk                (clk),
+      .rst                (rst),
+      .rdy                (rdy),
+      .clr                (clr),
+      .decode_success     (decode_success),
+      .decode_rs1_rename  (decode_rs1_rename),
+      .decode_rs2_rename  (decode_rs2_rename),
+      .decode_rs1_value   (decode_rs1_value),
+      .decode_rs2_value   (decode_rs2_value),
+      .decode_imm         (decode_imm),
+      .decode_rd_rename   (decode_rd_rename),
+      .decode_op          (decode_op),
+      .decode_pc          (decode_pc),
+      .alu_broadcast      (alu_broadcast),
+      .alu_cbd_value      (alu_cbd_value),
+      .alu_update_rename  (alu_update_rename),
+      .lsb_broadcast      (lsb_broadcast),
+      .lsb_cbd_value      (lsb_cbd_value),
+      .lsb_update_rename  (lsb_update_rename),
+      .rob_broadcast      (rob_broadcast),
+      .rob_cbd_value      (rob_cbd_value),
+      .rob_update_rename  (rob_update_rename),
+      .alu_enable         (alu_enable),
+      .to_alu_rd_renaming (to_alu_rd_renaming),
+      .to_alu_rs1_value   (to_alu_rs1_value),
+      .to_alu_rs2_value   (to_alu_rs2_value),
+      .to_alu_op          (to_alu_op),
+      .to_alu_imm         (to_alu_imm),
+      .to_alu_pc          (to_alu_pc),
+      .rs_full            (rs_full)
+    );
+  ALU inst_ALU
+    (
+      .clk           (clk),
+      .rdy           (rdy),
+      .rst           (rst),
+      .alu_enable    (alu_enable),
+      .in_rd_rename  (in_rd_rename),
+      .instr_pc      (instr_pc),
+      .imm           (imm),
+      .rs1_value     (rs1_value),
+      .rs2_value     (rs2_value),
+      .op            (op),
+      .result        (result),
+      .alu_broadcast (alu_broadcast),
+      .out_rd_rename (out_rd_rename),
+      .jumping_pc    (jumping_pc)
+    );
+  RegFile inst_RegFile
+    (
+      .clk                    (clk),
+      .rst                    (rst),
+      .rdy                    (rdy),
+      .from_decoder_rs1_index (from_decoder_rs1_index),
+      .from_decoder_rs2_index (from_decoder_rs2_index),
+      .from_decoder_rd_index  (from_decoder_rd_index),
+      .decoder_rd_rename      (decoder_rd_rename),
+      .rs1_renamed            (rs1_renamed),
+      .rs2_renamed            (rs2_renamed),
+      .to_decoder_rs1_value   (to_decoder_rs1_value),
+      .to_decoder_rs2_value   (to_decoder_rs2_value),
+      .to_decoder_rs1_rename  (to_decoder_rs1_rename),
+      .to_decoder_rs2_rename  (to_decoder_rs2_rename),
+      .rob_commit_index       (rob_commit_index),
+      .rob_commit_rename      (rob_commit_rename),
+      .rob_commit_value       (rob_commit_value),
+      .jump_wrong             (jump_wrong)
+    );
+  ROB inst_ROB
+    (
+      .clk                           (clk),
+      .rdy                           (rdy),
+      .rst                           (rst),
+      .rob_write_mem                 (rob_write_mem),
+      .to_mem_value                  (to_mem_value),
+      .to_mem_size                   (to_mem_size),
+      .to_mem_addr                   (to_mem_addr),
+      .rob_read_mem                  (rob_read_mem),
+      .from_mem_data                 (from_mem_data),
+      .to_reg_rd                     (to_reg_rd),
+      .to_reg_value                  (to_reg_value),
+      .to_reg_rename                 (to_reg_rename),
+      .rob_free_tag                  (rob_free_tag),
+      .decoder_input_enable          (decoder_input_enable),
+      .decoder_rd_rename             (decoder_rd_rename),
+      .decoder_fetch_rs1_index       (decoder_fetch_rs1_index),
+      .decoder_fetch_rs2_index       (decoder_fetch_rs2_index),
+      .to_decoder_rs1_ready          (to_decoder_rs1_ready),
+      .to_decoder_rs2_ready          (to_decoder_rs2_ready),
+      .to_decoder_rs1_value          (to_decoder_rs1_value),
+      .to_decoder_rs2_value          (to_decoder_rs2_value),
+      .decoder_op                    (decoder_op),
+      .decoder_pc                    (decoder_pc),
+      .predicted_jump                (predicted_jump),
+      .decoder_destination_mem_addr  (decoder_destination_mem_addr),
+      .decoder_destination_reg_index (decoder_destination_reg_index),
+      .alu_broadcast                 (alu_broadcast),
+      .alu_cbd_value                 (alu_cbd_value),
+      .alu_jumping_pc                (alu_jumping_pc),
+      .alu_update_rename             (alu_update_rename),
+      .lsb_broadcast                 (lsb_broadcast),
+      .lsb_cbd_value                 (lsb_cbd_value),
+      .lsb_addr                      (lsb_addr),
+      .lsb_update_rename             (lsb_update_rename),
+      .rob_broadcast                 (rob_broadcast),
+      .rob_update_rename             (rob_update_rename),
+      .rob_cbd_value                 (rob_cbd_value),
+      .rob_full                      (rob_full),
+      .jump_wrong                    (jump_wrong),
+      .jumping_pc                    (jumping_pc),
+      .to_predictor_enable           (to_predictor_enable),
+      .to_predictor_jump             (to_predictor_jump),
+      .to_predictor_pc               (to_predictor_pc)
+    );
+  LSB inst_LSB
+    (
+      .clk                (clk),
+      .rdy                (rdy),
+      .rst                (rst),
+      .jump_wrong         (jump_wrong),
+      .lsb_read_signal    (lsb_read_signal),
+      .lsb_write_signal   (lsb_write_signal),
+      .requiring_length   (requiring_length),
+      .to_mem_data        (to_mem_data),
+      .to_mem_addr        (to_mem_addr),
+      .load_signed        (load_signed),
+      .mem_load_success   (mem_load_success),
+      .from_mem_data      (from_mem_data),
+      .decode_signal      (decode_signal),
+      .decoder_rs1_rename (decoder_rs1_rename),
+      .decoder_rs2_rename (decoder_rs2_rename),
+      .decoder_rd_rename  (decoder_rd_rename),
+      .decoder_rs1_value  (decoder_rs1_value),
+      .decoder_rs2_value  (decoder_rs2_value),
+      .decoder_imm        (decoder_imm),
+      .decoder_op         (decoder_op),
+      .alu_broadcast      (alu_broadcast),
+      .alu_cbd_value      (alu_cbd_value),
+      .alu_update_rename  (alu_update_rename),
+      .rob_broadcast      (rob_broadcast),
+      .rob_cbd_value      (rob_cbd_value),
+      .rob_update_rename  (rob_update_rename),
+      .lsb_broadcast      (lsb_broadcast),
+      .lsb_cbd_value      (lsb_cbd_value),
+      .lsb_update_rename  (lsb_update_rename),
+      .lsb_full           (lsb_full)
+    );
 
-wire [`INSTRLEN] mem_instr_to_icache;
-wire [`ADDR] icache_pc;
-wire icache_enable_mem;
-wire mem_success_to_icache;
 
-ICache icache(
-  .clk(clk_in),.rst(rst_in),.rdy(rdy_in),
-  .stall_IF(stall_IF),.require_addr(ifetch_pc),.IF_instr(icache_instr_to_if),.fetch_success(IF_success),
-  .mem_instr(mem_instr_to_icache),.mem_addr(icache_pc),.mem_enable(icache_enable_mem),mem_fetch_success(mem_success_to_icache)
-);
-
-wire decode_success;
-wire [`ROBINDEX] decoder_rs1_rename_to_RS;
-wire [`ROBINDEX] decoder_rs2_rename_to_RS;
-wire [`ROBINDEX] decoder_rd_rename_to_RS;
-wire [`DATALEN] decoder_rs1_value_to_RS;
-wire [`DATALEN] decoder_rs2_value_to_RS;
-wire [`IMMLEN] decoder_imm_to_RS;
-wire [`OPCODE] decoder_op_to_RS;
-wire [`ROBINDEX] decoder_rs1_rename_to_LSB;
-wire [`ROBINDEX] decoder_rs2_rename_to_LSB;
-wire [`ROBINDEX] decoder_rd_rename_to_LSB;
-wire [`DATALEN] decoder_rs1_value_to_LSB;
-wire [`DATALEN] decoder_rs2_value_to_LSB;
-wire [`IMMLEN] decoder_imm_to_LSB;
-wire [`OPCODE] decoder_op_to_LSB;
-wire [`ADDR] decoder_pc;
-wire [`ROBINDEX] reg_rs1_rename_to_decoder;
-wire [`ROBINDEX] reg_rs2_rename_to_decoder;
-wire [`DATALEN] reg_rs1_value_to_decoder;
-wire [`DATALEN] reg_rs2_value_to_decoder;
-wire reg_rs1_busy;
-wire reg_rs2_busy;
-wire [`REGINDEX] decoder_rs1_index_to_reg;
-wire [`REGINDEX] decoder_rs2_index_to_reg;
-wire [`ROBINDEX] decoder_rd_rename_to_reg;
-wire [`ROBINDEX] rob_freetag_to_decoder;
-wire [`ROBINDEX] decoder_rd_rename_to_ROB;
-wire [`ROBINDEX] decoder_rs1_rename_to_ROB;
-wire [`ROBINDEX] decoder_rs2_rename_to_ROB;
-wire [`DATALEN] decoder_rs1_value_to_ROB;
-wire [`DATALEN] decoder_rs2_value_to_ROB;
-wire [`OPCODE] decoder_op_to_ROB;
-wire ROB_rs1_ready;
-wire ROB_rs2_ready;
-wire [`REGINDEX] decoder_rd_index_to_ROB;
-wire decoder_success;
-
-Decoder decoder(
-  .clk(clk_in),.rst(rst_in),.rdy(rdy_in),
-  .IF_success(IF_success),.instr(if_instr_to_decoder),.fetch_pc(ifetch_pc), 
-  .decode_success(decode_success),
-  .to_rs_rs1_rename(decoder_rs1_rename_to_RS),.to_rs_rs2_rename(decoder_rs2_rename_to_RS),.to_rs_rd_rename(decoder_rd_rename_to_RS),.to_rs_rs1_value(decoder_rs1_value_to_RS),.to_rs_rs2_value(decoder_rs2_value_to_RS),.to_rs_imm(decoder_imm_to_RS),.to_rs_op(decoder_op_to_RS),.decode_pc(decoder_pc),.to_lsb_rs1_rename(decoder_rs1_rename_to_LSB),.to_lsb_rs2_rename(decoder_rs2_rename_to_LSB),.to_lsb_rd_rename(decoder_rd_rename_to_LSB),.to_lsb_rs1_value(decoder_rs1_value_to_LSB),.to_lsb_rs2_value(decoder_rs2_value_to_LSB),.to_lsb_imm(decoder_imm_to_LSB),.to_lsb_op(decoder_op_to_LSB),
-  .from_reg_rs1_rob_rename(reg_rs1_rename_to_decoder),.from_reg_rs2_rob_rename(reg_rs2_rename_to_decoder),.reg_rs1_value(reg_rs1_value_to_decoder),.reg_rs2_value(reg_rs2_to_decoder),.reg_rs1_busy(reg_rs1_busy),.reg_rs2_busy(reg_rs2_busy),.to_reg_rs1_index(decoder_rs1_index_to_reg),.to_reg_rs2_index(decoder_rs2_index_to_reg),.to_reg_rd_rename(decoder_rd_rename_to_reg),
-  .rob_free_tag(rob_freetag_to_decoder),.to_rob_rd_rename(decoder_rd_rename_to_ROB),.rob_fetch_rs1_rename(decoder_rs1_rename_to_ROB),.rob_fetch_rs2_rename(decoder_rs2_rename_to_ROB),.rob_fetch_rs1_value(decoder_rs1_value_to_ROB),.rob_fetch_rs2_value(decoder_rs2_value_to_ROB),.rob_rs1_ready(ROB_rs1_ready),.rob_rs2_ready(ROB_rs2_ready),.to_rob_op(decoder_op_to_ROB),.to_rob_destination_reg_index(decoder_rd_index_to_ROB)
-);
-
-wire ALU_broadcast;
-wire [`DATALEN] ALU_broadcast_value;
-wire [`ROBINDEX] ALU_broadcast_rename;
-wire LSB_broadcast;
-wire [`DATALEN] LSB_broadcast_value;
-wire [`ROBINDEX] LSB_broadcast_rename;
-wire ROB_broadcast;
-wire [`DATALEN] ROB_broadcast_value;
-wire [`ROBINDEX] ROB_broadcast_rename;
-wire RS_enable_ALU;
-wire [`ROBINDEX] RS_rd_rename_to_ALU;
-wire [`DATALEN] RS_rs1_value_to_ALU;
-wire [`DATALEN] RS_rs2_value_to_ALU;
-wire [`OPCODE] RS_op_to_ALU;
-wire [`ADDR] RS_pc_to_ALU;
-
-RS rs(
-  .clk(clk_in),.rst(rst_in),.rdy(rdy_in),
-  .decode_success(decoder_success),.decode_rs1_rename(decoder_rs1_rename_to_RS),.decode_rs2_rename(decoder_rs2_rename_to_RS),.decode_rs1_value(decoder_rs1_value_to_RS),.decode_rs2_value(decoder_rs2_value_to_RS),.decode_imm(decoder_imm_to_RS),.decode_rd_rename(decoder_rd_rename_to_RS),.decode_op(decoder_op_to_RS),.decode_pc(decoder_pc),
-  .alu_broadcast(ALU_broadcast),.alu_cbd_value(ALU_broadcast_value),.alu_update_rename(ALU_broadcast_rename),.lsb_broadcast(LSB_broadcast),.lsb_cbd_value(LSB_broadcast_value),.lsb_update_rename(LSB_broadcast_rename),.rob_broadcast(ROB_broadcast),.rob_cbd_value(ROB_broadcast_value),.rob_update_rename(ROB_broadcast_rename),
-  //hello
-  .to_rob_rd_rename(decoder_rd_rename_to_ROB),.rob_fetch_rs1_rename(decoder_rs1_rename_to_ROB),.rob_fetch_rs2_rename(decoder_rs2_rename_to_ROB),.rob_fetch_rs1_value(decoder_rs1_value_to_ROB),.rob_fetch_rs2_value(decoder_rs2_value_to_ROB),.rob_rs1_ready(ROB_rs1_ready),.rob_rs2_ready(ROB_rs2_ready),.to_rob_op(decoder_op_to_ROB),.to_rob_destination_reg_index(decoder_rd_index_to_ROB)
-);
-
-LSB lsb(
-  .clk(clk_in),.rst(rst_in),.rdy(rdy_in),
-  .IF_success(IF_success),.instr(if_instr_to_decoder),.fetch_pc(ifetch_pc), 
-  .decode_success(decode_success),
-  .to_rs_rs1_rename(decoder_rs1_rename_to_RS),.to_rs_rs2_rename(decoder_rs2_rename_to_RS),.to_rs_rd_rename(decoder_rd_rename_to_RS),.to_rs_rs1_value(decoder_rs1_value_to_RS),.to_rs_rs2_value(decoder_rs2_value_to_RS),.to_rs_imm(decoder_imm_to_RS),.to_rs_op(decoder_op_to_RS),.decode_pc(decoder_pc),.to_lsb_rs1_rename(decoder_rs1_rename_to_LSB),.to_lsb_rs2_rename(decoder_rs2_rename_to_LSB),.to_lsb_rd_rename(decoder_rd_rename_to_LSB),.to_lsb_rs1_value(decoder_rs1_value_to_LSB),.to_lsb_rs2_value(decoder_rs2_value_to_LSB),.to_lsb_imm(decoder_imm_to_LSB),.to_lsb_op(decoder_op_to_LSB),
-  .from_reg_rs1_rob_rename(reg_rs1_rename_to_decoder),.from_reg_rs2_rob_rename(reg_rs2_rename_to_decoder),.reg_rs1_value(reg_rs1_value_to_decoder),.reg_rs2_value(reg_rs2_to_decoder),.reg_rs1_busy(reg_rs1_busy),.reg_rs2_busy(reg_rs2_busy),.to_reg_rs1_index(decoder_rs1_index_to_reg),.to_reg_rs2_index(decoder_rs2_index_to_reg),.to_reg_rd_rename(decoder_rd_rename_to_reg),
-  .rob_free_tag(rob_freetag_to_decoder),.to_rob_rd_rename(decoder_rd_rename_to_ROB),.rob_fetch_rs1_rename(decoder_rs1_rename_to_ROB),.rob_fetch_rs2_rename(decoder_rs2_rename_to_ROB),.rob_fetch_rs1_value(decoder_rs1_value_to_ROB),.rob_fetch_rs2_value(decoder_rs2_value_to_ROB),.rob_rs1_ready(ROB_rs1_ready),.rob_rs2_ready(ROB_rs2_ready),.to_rob_op(decoder_op_to_ROB),.to_rob_destination_reg_index(decoder_rd_index_to_ROB)
-);
-
-ROB rob(
-  .clk(clk_in),.rst(rst_in),.rdy(rdy_in),
-  .decode_success(decoder_success),.decode_rs1_rename(decoder_rs1_rename_to_RS),.decode_rs2_rename(decoder_rs2_rename_to_RS),.decode_rs1_value(decoder_rs1_value_to_RS),.decode_rs2_value(decoder_rs2_value_to_RS),.decode_imm(decoder_imm_to_RS),.decode_rd_rename(decoder_rd_rename_to_RS),.decode_op(decoder_op_to_RS),.decode_pc(decoder_pc),
-  .alu_broadcast(ALU_broadcast),.alu_cbd_value(ALU_broadcast_value),.alu_update_rename(ALU_broadcast_rename),.lsb_broadcast(LSB_broadcast),.lsb_cbd_value(LSB_broadcast_value),.lsb_update_rename(LSB_broadcast_rename),.rob_broadcast(ROB_broadcast),.rob_cbd_value(ROB_broadcast_value),.rob_update_rename(ROB_broadcast_rename),
-  //hello
-  .to_rob_rd_rename(decoder_rd_rename_to_ROB),.rob_fetch_rs1_rename(decoder_rs1_rename_to_ROB),.rob_fetch_rs2_rename(decoder_rs2_rename_to_ROB),.rob_fetch_rs1_value(decoder_rs1_value_to_ROB),.rob_fetch_rs2_value(decoder_rs2_value_to_ROB),.rob_rs1_ready(ROB_rs1_ready),.rob_rs2_ready(ROB_rs2_ready),.to_rob_op(decoder_op_to_ROB),.to_rob_destination_reg_index(decoder_rd_index_to_ROB)
-);
-
-RegFile regfile(
-  .clk(clk_in),.rst(rst_in),.rdy(rdy_in),
-  .IF_success(IF_success),.instr(if_instr_to_decoder),.fetch_pc(ifetch_pc), 
-  .decode_success(decode_success),
-  .to_rs_rs1_rename(decoder_rs1_rename_to_RS),.to_rs_rs2_rename(decoder_rs2_rename_to_RS),.to_rs_rd_rename(decoder_rd_rename_to_RS),.to_rs_rs1_value(decoder_rs1_value_to_RS),.to_rs_rs2_value(decoder_rs2_value_to_RS),.to_rs_imm(decoder_imm_to_RS),.to_rs_op(decoder_op_to_RS),.decode_pc(decoder_pc),.to_lsb_rs1_rename(decoder_rs1_rename_to_LSB),.to_lsb_rs2_rename(decoder_rs2_rename_to_LSB),.to_lsb_rd_rename(decoder_rd_rename_to_LSB),.to_lsb_rs1_value(decoder_rs1_value_to_LSB),.to_lsb_rs2_value(decoder_rs2_value_to_LSB),.to_lsb_imm(decoder_imm_to_LSB),.to_lsb_op(decoder_op_to_LSB),
-  .from_reg_rs1_rob_rename(reg_rs1_rename_to_decoder),.from_reg_rs2_rob_rename(reg_rs2_rename_to_decoder),.reg_rs1_value(reg_rs1_value_to_decoder),.reg_rs2_value(reg_rs2_to_decoder),.reg_rs1_busy(reg_rs1_busy),.reg_rs2_busy(reg_rs2_busy),.to_reg_rs1_index(decoder_rs1_index_to_reg),.to_reg_rs2_index(decoder_rs2_index_to_reg),.to_reg_rd_rename(decoder_rd_rename_to_reg),
-  .rob_free_tag(rob_freetag_to_decoder),.to_rob_rd_rename(decoder_rd_rename_to_ROB),.rob_fetch_rs1_rename(decoder_rs1_rename_to_ROB),.rob_fetch_rs2_rename(decoder_rs2_rename_to_ROB),.rob_fetch_rs1_value(decoder_rs1_value_to_ROB),.rob_fetch_rs2_value(decoder_rs2_value_to_ROB),.rob_rs1_ready(ROB_rs1_ready),.rob_rs2_ready(ROB_rs2_ready),.to_rob_op(decoder_op_to_ROB),.to_rob_destination_reg_index(decoder_rd_index_to_ROB)
-);
-
-ALU alu(
-  .clk(clk_in),.rst(rst_in),.rdy(rdy_in),
-  .IF_success(IF_success),.instr(if_instr_to_decoder),.fetch_pc(ifetch_pc), 
-  .decode_success(decode_success),
-  .to_rs_rs1_rename(decoder_rs1_rename_to_RS),.to_rs_rs2_rename(decoder_rs2_rename_to_RS),.to_rs_rd_rename(decoder_rd_rename_to_RS),.to_rs_rs1_value(decoder_rs1_value_to_RS),.to_rs_rs2_value(decoder_rs2_value_to_RS),.to_rs_imm(decoder_imm_to_RS),.to_rs_op(decoder_op_to_RS),.decode_pc(decoder_pc),.to_lsb_rs1_rename(decoder_rs1_rename_to_LSB),.to_lsb_rs2_rename(decoder_rs2_rename_to_LSB),.to_lsb_rd_rename(decoder_rd_rename_to_LSB),.to_lsb_rs1_value(decoder_rs1_value_to_LSB),.to_lsb_rs2_value(decoder_rs2_value_to_LSB),.to_lsb_imm(decoder_imm_to_LSB),.to_lsb_op(decoder_op_to_LSB),
-);
 endmodule

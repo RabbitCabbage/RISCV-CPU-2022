@@ -1,4 +1,4 @@
-`include "define.v"
+`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
 module RS(
     //control signals
     input wire clk,
@@ -15,7 +15,7 @@ module RS(
     input wire [`IMMLEN] decode_imm,
     input wire [`ROBINDEX] decode_rd_rename,
     input wire [`OPLEN] decode_op,
-    input wire [`ADDR] decpde_pc,
+    input wire [`ADDR] decode_pc,
 
     //monitor the updated renaming from the cbd
     //input the number and renaming from alu
@@ -25,23 +25,23 @@ module RS(
     //like add/sub these will directly get answer from the alu
     input wire lsb_broadcast,
     input wire [`DATALEN] lsb_cbd_value,
-    input wire [`ROBINDEX] lsb_updated_rename,
+    input wire [`ROBINDEX] lsb_update_rename,
     //load get answer from the lsb, load data to the reg
     input wire rob_broadcast,
     input wire [`DATALEN] rob_cbd_value,
     input wire [`ROBINDEX] rob_update_rename,
     //get answer from the rob, such as put the answer from the rob
 
-    output wire alu_enable,
-    output wire [`ROBINDEX] to_alu_rd_renaming,
-    output wire [`DATALEN] to_alu_rs1_value,
-    output wire [`DATALEN] to_alu_rs2_value,
-    output wire [`OPLEN] to_alu_op,
-    output wire [`IMMLEN] to_alu_imm,
-    output wire [`ADDR] to_alu_pc,
+    output reg alu_enable,
+    output reg [`ROBINDEX] to_alu_rd_renaming,
+    output reg [`DATALEN] to_alu_rs1_value,
+    output reg [`DATALEN] to_alu_rs2_value,
+    output reg [`OPLEN] to_alu_op,
+    output reg [`IMMLEN] to_alu_imm,
+    output reg [`ADDR] to_alu_pc,
 
-    output wire rs_full,//如果rs满了的话就要停下if
-)
+    output reg rs_full//如果rs满了的话就要停下if
+);
 reg [`OPLEN] opcode[`RSSIZE];
 reg [`DATALEN] rs1_value[`RSSIZE];
 reg [`DATALEN] rs2_value[`RSSIZE];
@@ -52,11 +52,13 @@ reg [`IMMLEN] imm[`RSSIZE];
 reg ready[`RSSIZE];
 reg busy[`RSSIZE];
 reg [`ADDR] pc[`RSSIZE];
-wire [`RSINDEX] free_index;//表示的是哪一个RS是空的可以用的
-wire [`RSINDEX] ready_index; //表达hi说的是哪一个RS已经ready了可以进行计算了
+reg [`RSINDEX] free_index;//表示的是哪一个RS是空的可以用的
+reg [`RSINDEX] ready_index; //表达hi说的是哪一个RS已经ready了可以进行计算了
+reg stall_IF;
+reg [`RSINDEX] issue_index;
 
-assign stall_IF = (free_index == `RSNOTFOUND);//如果找不到空的RS，则说明RS满了，那么就应该停IF。
-assign free_index = ~busy[0] ? 0:  
+assign stall_IF                       = (free_index == `RSNOTFOUND);//如果找不到空的RS，则说明RS满了，那么就应该停IF。
+assign free_index                     = ~busy[0] ? 0:  
                         ~busy[1] ? 1 :
                             ~busy[2] ? 2 : 
                                 ~busy[3] ? 3 :
@@ -72,7 +74,7 @@ assign free_index = ~busy[0] ? 0:
                                                                         ~busy[13] ? 13 :
                                                                             ~busy[14] ? 14 : 
                                                                                 ~busy[15] ? 15 : `RSNOTFOUND;
-assign issue_index = ~ready[0] ? 0:  
+assign issue_index                    = ~ready[0] ? 0:  
                         ~ready[1] ? 1 :
                             ~ready[2] ? 2 : 
                                 ~ready[3] ? 3 :
@@ -88,38 +90,38 @@ assign issue_index = ~ready[0] ? 0:
                                                                         ~ready[13] ? 13 :
                                                                             ~ready[14] ? 14 : 
                                                                                 ~ready[15] ? 15 : `RSNOTFOUND;
-
-always @(*) begin
+integer i;
+always @(posedge clk) begin
     if(rst==`TRUE || clr==`TRUE) begin
-        alu_enable <=  `FALSE;
+        alu_enable                    <=  `FALSE;
         for(i=0;i<32;i=i+1) begin
-            busy[i] <= `FALSE;
-            opcode[i] <= 6'0;
+            busy[i]                   <= `FALSE;
+            opcode[i]                 <= 6'0;
         end
     end else if (rdy) begin
         // 如果在RS中又ready的index；
         // 发布到alu中进行计算
         if(issue_index != `RSNOTFOUND) begin
-            alu_enable <= `TRUE;
-            to_alu_op <= opcode[issue_index];
-            to_alu_rs1_value <= rs1_value[issue_index];
-            to_alu_rs2_value <= rs2_value[issue_index];
-            to_alu_imm <= imm[issue_index];
-            to_alu_renaming <= rd_rename[issue_index];
-            to_alu_pc <= pc[issue_index];
-            busy[issue_index] <= `FALSE;//这条rs就可以使用了
+            alu_enable                <= `TRUE;
+            to_alu_op                 <= opcode[issue_index[3:0]];
+            to_alu_rs1_value          <= rs1_value[issue_index[3:0]];
+            to_alu_rs2_value          <= rs2_value[issue_index[3:0]];
+            to_alu_imm                <= imm[issue_index[3:0]];
+            to_alu_rd_renaming        <= rd_rename[issue_index[3:0]];
+            to_alu_pc                 <= pc[issue_index[3:0]];
+            busy[issue_index[3:0]]         <= `FALSE;//这条rs就可以使用了
         end
         //如果decode这边成功解码，并且有空位置，添加一条指令
         if(decode_success && free_index!=`RSNOTFOUND) begin
-            busy[free_index] <= `TRUE;
-            tags[free_index] <= decode_rd_rename;
-            opcode[free_index] <= decode_op;
-            imm[free_index] <= decode_imm;
-            pc[free_index] <= decode_pc;
-            rs1_value[free_index] <= decode_rs1_value;
-            rs2_value[free_index] <= decode_rs2_value;
-            rs1_rename[free_index] <= decode_rs1_rename;
-            rs2_rename[free_index] <= decode_rs2_rename;
+            busy[free_index[3:0]]          <= `TRUE;
+            rd_rename[free_index[3:0]]     <= decode_rd_rename;
+            opcode[free_index[3:0]]        <= decode_op;
+            imm[free_index[3:0]]           <= decode_imm;
+            pc[free_index[3:0]]            <= decode_pc;
+            rs1_value[free_index[3:0]]     <= decode_rs1_value;
+            rs2_value[free_index[3:0]]     <= decode_rs2_value;
+            rs1_rename[free_index[3:0]]    <= decode_rs1_rename;
+            rs2_rename[free_index[3:0]]    <= decode_rs2_rename;
         end     
         //monitor alu lsb and rob
         if(alu_broadcast==`TRUE) begin
@@ -128,10 +130,10 @@ always @(*) begin
                     if(rs1_rename[i]==alu_update_rename) begin
                         //说明这个要被替换掉了
                         rs1_rename[i] <= `ROBNOTRENAME;
-                        rs1_value[i] <= alu_cbd_value;
+                        rs1_value[i]  <= alu_cbd_value;
                     end else if(rs2_rename[i]==alu_update_rename) begin
                         rs2_rename[i] <= `ROBNOTRENAME;
-                        rs2_value[i] <= alu_cbd_value;
+                        rs2_value[i]  <= alu_cbd_value;
                     end
                 end
             end
@@ -139,12 +141,12 @@ always @(*) begin
         if(lsb_broadcast==`TRUE) begin
             for(i=0;i<16;i=i+1) begin
                 if(busy[i]==`TRUE) begin
-                    if(rs1_rename[i]==lsb_updated_rename) begin
+                    if(rs1_rename[i]==lsb_update_rename) begin
                         rs1_rename[i] <= `ROBNOTRENAME;
-                        rs1_value[i] = lsb_cbd_value;
+                        rs1_value[i]  = lsb_cbd_value;
                     end else if(rs2_rename[i]==lsb_update_rename) begin
                         rs2_rename[i] <= `ROBNOTRENAME;
-                        rs2_value[i] <= lsb_cbd_value;
+                        rs2_value[i]  <= lsb_cbd_value;
                     end
                 end
             end
@@ -154,17 +156,17 @@ always @(*) begin
                     if(busy[i]) begin
                     if(rs1_rename[i]==rob_update_rename) begin
                         rs1_rename[i] <= `ROBNOTRENAME;
-                        rs1_value[i] <= rob_cbd_value;
+                        rs1_value[i]  <= rob_cbd_value;
                     end else if(rs2_rename[i]==rob_update_rename) begin
                         rs2_rename[i] <= `ROBNOTRENAME;
-                        rs2_value[i] <= rob_cbd_value;
+                        rs2_value[i]  <= rob_cbd_value;
                     end
                 end
             end
         end
         for(i=0;i<16;i=i+1) begin
             if(rs1_rename[i]==`ROBNOTRENAME && rs2_rename[i]==`ROBNOTRENAME) begin
-                ready[i] <= `TRUE;
+                ready[i]              <= `TRUE;
             end
         end
     end
