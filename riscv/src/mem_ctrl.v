@@ -6,7 +6,7 @@ module MemCtrl (
     input wire rdy,
     input wire rst,
     // When the ROB jump wrong, the reading or writing should be halted
-    input wire clr,
+    input wire jump_wrong,
 
     // from and to LSB
     // LSB write and read memory, separately using two signals
@@ -14,6 +14,7 @@ module MemCtrl (
     input wire lsb_read_signal,
     input wire [`ADDR] lsb_addr,
     input wire [`LSBINSTRLEN] lsb_len,//表示的是这个ls指令涉及了多少位，32、16、8分别对应3、2、1
+    input wire lsb_load_signed,//todo
     input wire [`DATALEN] lsb_write_data,
     output reg [`DATALEN] lsb_read_data,
     output reg lsb_success,
@@ -31,7 +32,8 @@ module MemCtrl (
     output reg [`ADDR] mem_addr,
     output reg [`BYTELEN] mem_byte_write,
     input wire [`BYTELEN] mem_byte_read,
-    output wire read_write
+    output reg read_write,
+    output reg mem_enable
 );
 
 reg working;
@@ -42,15 +44,16 @@ reg [`DATALEN] ultimate_data;//storing the result while processing
 reg [2:0] finished;//result processed,00,01,10,11
 
 always @(posedge clk) begin
-    if(rst == `TRUE) begin
+    if(rst == `TRUE || jump_wrong==`TRUE) begin
         
     end else if (rdy == `TRUE) begin
         // There is an instruction on operation so it cannot begin a new instruction.
         if(working) begin
             // 如果是向IO进行读写就不应该再把地址加一加二操作了。
             if(start_addr[17:16]==2'b11) begin
-                if(read_write == `READ) begin //I/O read
+                if(icache_read_signal==`TRUE || lsb_read_signal==`TRUE) begin //I/O read
                 //load word/half word/ byte
+                    read_write                       <= `READ;
                     if(finished == requiring_len) begin
                         //requiring length has been read
                         if(for_lsb_ic == 0) begin 
@@ -64,6 +67,7 @@ always @(posedge clk) begin
                         end
                         working                      <= `FALSE;
                         mem_addr                     <= `NULL32;
+                        mem_enable                   <= `FALSE;
                         ultimate_data                <= `NULL32;
                         mem_byte_write               <= `NULL8;
                     end else begin
@@ -73,15 +77,19 @@ always @(posedge clk) begin
                         case(finished)
                             3'b000: begin
                                 ultimate_data[7:0]   <= mem_byte_read;
+                                mem_enable           <= `TRUE;
                             end
                             3'b001: begin
                                 ultimate_data[15:8]  <= mem_byte_read;
+                                mem_enable           <= `TRUE;
                             end
                             3'b010: begin
                                 ultimate_data[23:16] <= mem_byte_read;
+                                mem_enable           <= `TRUE;
                             end
                             3'b011: begin
                                 mem_addr             <= `NULL32;
+                                mem_enable           <= `FALSE;
                                 ultimate_data[31:24] <= mem_byte_read;
                             end
                             default: begin end
@@ -90,23 +98,28 @@ always @(posedge clk) begin
                     end
                 end else begin //I/O write, that is lsb wirte into memory
                 //Store word/half word/byte
+                    read_write                       <= `WRITE;
                     if(finished == requiring_len - 3'b001) begin
                         icache_success               <= `FALSE;
                         lsb_success                  <= `TRUE;
                         working                      <= `FALSE;
                         mem_addr                     <= `NULL32;
+                        mem_enable                   <= `FALSE;
                         mem_byte_write               <= `NULL8;
                         ultimate_data                <= `NULL32;
                     end else begin
                         case(finished)
                             3'b000: begin
                                 mem_byte_write       <= lsb_write_data[15:8];
+                                mem_enable           <= `TRUE;
                             end
                             3'b001: begin
                                 mem_byte_write       <= lsb_write_data[23:16];
+                                mem_enable           <= `TRUE;
                             end
                             3'b010: begin
                                 mem_byte_write       <= lsb_write_data[31:24];
+                                mem_enable           <= `FALSE;
                             end
                             default: begin end
                         endcase
@@ -129,6 +142,7 @@ always @(posedge clk) begin
                         end
                         working                      <= `FALSE;
                         mem_addr                     <= `NULL32;
+                        mem_enable                   <= `FALSE;
                         ultimate_data                <= `NULL32;
                         mem_byte_write               <= `NULL8;
                     end else begin
@@ -139,18 +153,22 @@ always @(posedge clk) begin
                             3'b000: begin
                                 ultimate_data[7:0]   <= mem_byte_read;
                                 mem_addr             <= start_addr + 1;
+                                mem_enable           <= `TRUE;
                             end
                             3'b001: begin
                                 ultimate_data[15:8]  <= mem_byte_read;
                                 mem_addr             <= start_addr + 2; 
+                                mem_enable           <= `TRUE;
                             end
                             3'b010: begin
                                 ultimate_data[23:16] <= mem_byte_read;
                                 mem_addr             <= start_addr + 3; 
+                                mem_enable           <= `TRUE;
                             end
                             3'b011: begin
                                 ultimate_data[31:24] <= mem_byte_read;
                                 mem_addr             <= `NULL32;
+                                mem_enable           <= `FALSE;
                             end
                             default: begin end
                         endcase
@@ -162,20 +180,24 @@ always @(posedge clk) begin
                         lsb_success                  <= `TRUE;
                         working                      <= `FALSE;
                         mem_addr                     <= `NULL32;
+                        mem_enable                   <= `FALSE;
                         mem_byte_write               <= `NULL8;
                     end else begin
                         case(finished)
                             3'b000: begin
                                 mem_byte_write       <= lsb_write_data[15:8];
                                 mem_addr             <= start_addr + 1;
+                                mem_enable           <= `TRUE;
                             end
                             3'b001: begin
                                 mem_byte_write       <= lsb_write_data[23:16];
                                 mem_addr             <= start_addr + 2;
+                                mem_enable           <= `TRUE;
                             end
                             3'b010: begin
                                 mem_byte_write       <= lsb_write_data[31:24];
                                 mem_addr             <= start_addr + 3;
+                                mem_enable           <= `TRUE;
                             end
                             default: begin end
                         endcase
@@ -193,6 +215,7 @@ always @(posedge clk) begin
                     for_lsb_ic                       <= 1'b0;
                     start_addr                       <= lsb_addr;
                     mem_addr                         <= lsb_addr;
+                    mem_enable                       <= `TRUE;
                     read_write                       <= `READ;
                     //先读进来一个byte
                     requiring_len                    <= lsb_len;
@@ -210,6 +233,7 @@ always @(posedge clk) begin
                     icache_success                   <= `FALSE;
                     lsb_success                      <= `FALSE;
                     mem_addr                         <= lsb_addr;
+                    mem_enable                       <= `TRUE;
                     mem_byte_write                   <= lsb_write_data[7:0];
                     //先写入一个byte
                 end
@@ -221,6 +245,7 @@ always @(posedge clk) begin
                 start_addr                           <= icache_addr;
                 read_write                           <= `READ;
                 mem_addr                             <= icache_addr;//先读进来一个byte
+                mem_enable                           <= `TRUE;
                 requiring_len                        <= `REQUIRE32;
                 finished                             <= 3'b000;
                 icache_success                       <= `FALSE;
@@ -231,6 +256,7 @@ always @(posedge clk) begin
                 lsb_success                          <= `FALSE;
                 read_write                           <= `NULL1;
                 mem_addr                             <= `NULL32;
+                mem_enable                           <= `FALSE;
                 mem_byte_write                       <= `NULL8;
             end
         end

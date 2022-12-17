@@ -25,6 +25,21 @@ module LSB(
     input wire [`IMMLEN] decoder_imm,
     input wire [`OPLEN] decoder_op,
 
+    //rob let lsb commit
+    //todo
+    input wire rob_enable_lsb_read,
+    input wire rob_enable_lsb_write,
+    input wire [`ADDR] from_rob_addr,
+    input wire [`LSBINSTRLEN] from_rob_length,
+    input wire [`DATALEN] from_rob_data_to_store,
+    output reg [`DATALEN] to_rob_data_loaded,
+
+    //to rob, tell rob the addr has been calculated
+    output wire lsb_calculated_addr_signal,
+    output wire [`ADDR]lsb_destination_addr_to_rob,
+    output wire [`ROBINDEX] lsb_rename_to_rob,
+    output wire [`ADDR] lsb_calculated_instr_pc,
+
     //from alu cbd
     input wire alu_broadcast,
     input wire [`DATALEN] alu_cbd_value,
@@ -37,7 +52,7 @@ module LSB(
     output wire lsb_broadcast,
     output reg [`DATALEN] lsb_cbd_value,
     output reg [`ROBINDEX] lsb_update_rename,
-    
+    output reg [`ADDR] lsb_cbd_addr,
     output wire lsb_full
 );
 reg                 busy[`LSBSIZE];
@@ -116,6 +131,7 @@ always @(posedge clk) begin
                     addr_ready[current] <= `FALSE;
                     head <= current;
                     lsb_update_rename <= rob_index[current];
+                    lsb_cbd_addr <= destination_mem_addr[current];
                 end
                 `LB,`LBU,`LH,`LHU,`LW: begin
                     busy[current] <= `FALSE;
@@ -124,6 +140,7 @@ always @(posedge clk) begin
                     lsb_write_signal <= `FALSE;
                     lsb_read_signal <= `TRUE;
                     lsb_update_rename <= rob_index[current];
+                    lsb_cbd_addr <= destination_mem_addr[current];
                     to_mem_addr <= destination_mem_addr[current];
                     load_signed <= (op[current]==`LHU || op[current]==`LBU)? `FALSE : `TRUE;
                     case(op[current])
@@ -145,6 +162,7 @@ always @(posedge clk) begin
             lsb_broadcast <= `TRUE;
             lsb_cbd_value <= from_mem_data;
             lsb_update_rename <= rob_index[current];
+            lsb_cbd_addr <= destination_mem_addr[current];
             busy[current] <= `FALSE;
             addr_ready[current] <= `FALSE;
             head <= current;
@@ -153,6 +171,12 @@ always @(posedge clk) begin
         if(to_calculate != `LSBNOTRENAME) begin
             destination_mem_addr[to_calculate[3:0]] <= rs1_value[to_calculate[3:0]] + imms[current];
             addr_ready[to_calculate[3:0]] <=  `TRUE;
+            lsb_destination_addr_to_rob <= destination_mem_addr[to_calculate[3:0]];
+            lsb_calculated_addr_signal <= `TRUE;
+            lsb_rename_to_rob <= rob_index[to_calculate[3:0]];
+            lsb_calculated_instr_pc <= pc[to_calculate[3:0]];
+        end else begin
+            lsb_calculated_addr_signal <= `FALSE;
         end
         // add an entry to lsb
         if(decode_signal==`TRUE && head != tail) begin

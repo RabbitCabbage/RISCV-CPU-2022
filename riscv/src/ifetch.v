@@ -20,10 +20,11 @@ module IF(
     // if lsb or rob is full, then fetching should be stalled
     input wire stall_IF,
     output reg [`INSTRLEN] instr_to_decode,
+    output reg [`ADDR] pc_to_decoder,
     output reg IF_success,
 
     // from predictor
-    input wire is_jump_instr,
+    output reg is_jump_instr,//todo
     input wire jump_prediction
     //表示的是上一个指令是否是跳转指令，以及predict是否跳转
 );
@@ -49,6 +50,7 @@ always @(posedge clk) begin
         icache_enable <= `TRUE;
         if(icache_success ==`TRUE) begin
             instr_to_decode <= instr_fetched;
+            pc_to_decoder <= pc;
             IF_success <= `TRUE;
         end
     end

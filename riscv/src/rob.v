@@ -4,13 +4,13 @@ module ROB(
     input wire clk,
     input wire rdy,
     input wire rst,
-    //commit to memory
-    output reg rob_write_mem,
-    output reg [`DATALEN] to_mem_value,
-    output reg [`LSBINSTRLEN] to_mem_size,
-    output reg [`ADDR] to_mem_addr,
-    output wire rob_read_mem,
-    input wire [`DATALEN] from_mem_data,
+    //commit to lsb, let lsb commit and perform the instr
+    output reg rob_enable_lsb_write,
+    output reg [`DATALEN] to_lsb_value,
+    output reg [`LSBINSTRLEN] to_lsb_size,
+    output reg [`ADDR] to_lsb_addr,
+    output wire rob_enable_lsb_read,
+    input wire [`DATALEN] from_lsb_data,
     //commit to register file
     output reg [`REGINDEX] to_reg_rd,
     output reg [`DATALEN] to_reg_value,
@@ -31,8 +31,13 @@ module ROB(
     input wire [`OPLEN] decoder_op,
     input wire [`ADDR] decoder_pc,
     input wire predicted_jump,
-    input wire [`ADDR] decoder_destination_mem_addr,//from lsb
     input wire [`REGINDEX] decoder_destination_reg_index,//from decoder
+
+
+    input wire [`ADDR] lsb_destination_mem_addr,//from lsb 如果lsb算出来了一个destination就会送过来
+    input wire lsb_input_enable,
+    input wire [`ROBINDEX] from_lsb_rename,
+    input wire [`ADDR] from_lsb_pc,
 
     input wire alu_broadcast,
     input wire [`DATALEN] alu_cbd_value,
@@ -91,14 +96,13 @@ always @(posedge clk) begin
     if(rst == `TRUE ||(rdy == `TRUE && jump_wrong == `TRUE)) begin
         head <= 1;
         tail <= 1;
-        to_reg_rd <= `NULL6;
-        rob_write_mem <= `FALSE;
-        rob_read_mem <= `FALSE;
+        to_reg_rd <= `NULL5;
+        rob_enable_lsb_write <= `FALSE;
+        rob_enable_lsb_read <= `FALSE;
         jump_wrong <= `FALSE;
         rob_broadcast <= `FALSE;
         rob_update_rename <= `NULL5;
         rob_cbd_value <= `NULL32;
-        rob_full <= `FALSE;
         jump_wrong <= `FALSE;
         jumping_pc <= `NULL32;
         for(i=0;i<`ROBSIZESCALAR;i=i+1) begin
@@ -112,22 +116,22 @@ always @(posedge clk) begin
        if(ready[current]==`TRUE && head != tail) begin
            case(op[current])
                `SB: begin
-                    to_mem_size <= `REQUIRE8;
-                    to_mem_addr <= destination_mem_addr[current];
-                    to_mem_value <= rd_value[current];
-                    rob_write_mem <= `TRUE;
+                    to_lsb_size <= `REQUIRE8;
+                    to_lsb_addr <= destination_mem_addr[current];
+                    to_lsb_value <= rd_value[current];
+                    rob_enable_lsb_write <= `TRUE;
                end
                `SH: begin
-                    to_mem_size <= `REQUIRE16;
-                    to_mem_addr <= destination_mem_addr[current];
-                    to_mem_value <= rd_value[current];
-                    rob_write_mem <= `TRUE;
+                    to_lsb_size <= `REQUIRE16;
+                    to_lsb_addr <= destination_mem_addr[current];
+                    to_lsb_value <= rd_value[current];
+                    rob_enable_lsb_write <= `TRUE;
                end
                `SW: begin
-                    to_mem_size <= `REQUIRE32;
-                    to_mem_addr <= destination_mem_addr[current];
-                    to_mem_value <= rd_value[current];
-                    rob_write_mem <= `TRUE;
+                    to_lsb_size <= `REQUIRE32;
+                    to_lsb_addr <= destination_mem_addr[current];
+                    to_lsb_value <= rd_value[current];
+                    rob_enable_lsb_write <= `TRUE;
                end
                `JALR: begin
                     to_reg_rd <= destination_reg_index[current];
@@ -159,9 +163,8 @@ always @(posedge clk) begin
                end
            endcase
        end
-       if(decoder_input_enable) begin
+       if(decoder_input_enable == `TRUE) begin
            pc[next] <= decoder_pc;
-           destination_mem_addr[next] <= decoder_destination_mem_addr;
            destination_reg_index[next] <= decoder_destination_reg_index;
            op[next] <= decoder_op;
            ready[next] <= `FALSE;
@@ -172,6 +175,10 @@ always @(posedge clk) begin
            end else begin
                is_store[next] <= `FALSE;
            end
+        end
+        if(lsb_input_enable == `TRUE) begin
+            pc[from_lsb_rename[3:0]] <= from_lsb_pc;
+            destination_mem_addr[from_lsb_rename[3:0]] <= lsb_destination_mem_addr;
         end
        if(alu_broadcast == `TRUE) begin
            rd_value[alu_update_rename[3:0]] <= alu_cbd_value;

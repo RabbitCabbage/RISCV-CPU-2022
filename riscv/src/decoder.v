@@ -39,11 +39,12 @@ module Decoder(
     input wire [`ROBINDEX] from_reg_rs2_rob_rename,
     input wire [`DATALEN] reg_rs1_value,
     input wire [`DATALEN] reg_rs2_value,
-    input wire reg_rs1_busy,
-    input wire reg_rs2_busy, 
+    input wire reg_rs1_renamed,
+    input wire reg_rs2_renamed, 
     output wire [`REGINDEX] to_reg_rs1_index,
     output wire [`REGINDEX] to_reg_rs2_index,
     output wire [`ROBINDEX] to_reg_rd_rename,
+    output wire [`REGINDEX] to_reg_rd_index,
 
     // from ROB, asking for the free index for the rd renaming
     // ask for the value of issued results
@@ -77,10 +78,10 @@ assign rob_fetch_rs1_index                   = from_reg_rs1_rob_rename;//regfile
 assign rob_fetch_rs2_index                   = from_reg_rs2_rob_rename;//regfile送回来rename
 assign to_reg_rd_rename                      = rob_free_tag;//rob空的tag赋给rd作为rename
 assign decode_pc                             = fetch_pc;
-assign rs1_value                             = (reg_rs1_busy==`FALSE)?reg_rs1_value:(rob_rs1_ready==`TRUE)?rob_fetch_rs1_value:`NULL32;
-assign rs2_value                             = (reg_rs2_busy==`FALSE)?reg_rs2_value:(rob_rs2_ready==`TRUE)?rob_fetch_rs2_value:`NULL32;
-assign rs1_rename                            = (reg_rs1_busy==`FALSE)?`ROBNOTRENAME:(rob_rs1_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs1_rob_rename;
-assign rs2_rename                            = (reg_rs2_busy==`FALSE)?`ROBNOTRENAME:(rob_rs2_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs2_rob_rename;
+assign rs1_value                             = (reg_rs1_renamed==`FALSE)?reg_rs1_value:(rob_rs1_ready==`TRUE)?rob_fetch_rs1_value:`NULL32;
+assign rs2_value                             = (reg_rs2_renamed==`FALSE)?reg_rs2_value:(rob_rs2_ready==`TRUE)?rob_fetch_rs2_value:`NULL32;
+assign rs1_rename                            = (reg_rs1_renamed==`FALSE)?`ROBNOTRENAME:(rob_rs1_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs1_rob_rename;
+assign rs2_rename                            = (reg_rs2_renamed==`FALSE)?`ROBNOTRENAME:(rob_rs2_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs2_rob_rename;
 
 always @(posedge clk) begin
     //rst has nothing on this module, because this module has nothing stored in itself.

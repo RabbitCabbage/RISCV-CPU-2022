@@ -9,7 +9,7 @@ module ICache (
 
     //IF module
     //IF requires, and ICache gives
-    input wire stall_IF,
+    input wire if_enable,
     input  wire [`ADDR] require_addr,
     output reg [`INSTRLEN] IF_instr,
     output reg fetch_success,
@@ -32,7 +32,7 @@ integer i;
         valid[i]                                 <=`FALSE;
       end
     end
-    if(rdy==`TRUE && stall_IF==`FALSE) begin
+    if(rdy==`TRUE && if_enable==`FALSE) begin
           if (valid[require_addr[`ICINDEX]] && (tag[require_addr[`ICTAG]]==require_addr[`ICTAG])) begin
                 IF_instr                         <= icache[require_addr[`ICINDEX]];
                 fetch_success                    <= `TRUE;

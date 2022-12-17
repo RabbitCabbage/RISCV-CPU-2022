@@ -4,7 +4,7 @@ module RS(
     input wire clk,
     input wire rst,
     input wire rdy,
-    input wire clr,
+    input wire jump_wrong,
     
     //from decoder
     input wire decode_success,
@@ -92,7 +92,7 @@ assign issue_index                    = ~ready[0] ? 0:
                                                                                 ~ready[15] ? 15 : `RSNOTFOUND;
 integer i;
 always @(posedge clk) begin
-    if(rst==`TRUE || clr==`TRUE) begin
+    if(rst==`TRUE || jump_wrong==`TRUE) begin
         alu_enable                    <=  `FALSE;
         for(i=0;i<32;i=i+1) begin
             busy[i]                   <= `FALSE;

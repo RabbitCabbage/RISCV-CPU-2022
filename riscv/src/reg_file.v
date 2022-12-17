@@ -20,8 +20,7 @@ module RegFile(
     // from ROB
     input wire [`REGINDEX] rob_commit_index,
     input wire [`ROBINDEX] rob_commit_rename,
-    input wire [`DATALEN] rob_commit_value,
-    input wire jump_wrong
+    input wire [`DATALEN] rob_commit_value
 );
 reg [`DATALEN] reg_value [`REGSIZE];
 reg renamed[`REGSIZE];
@@ -34,7 +33,7 @@ assign to_decoder_rs2_rename = reg_rename[from_decoder_rs2_index];
 assign rs2_renamed = renamed[from_decoder_rs2_index];
 integer i;
 always @(posedge clk)begin
-    if(rst==`TRUE || jump_wrong==`TRUE) begin
+    if(rst==`TRUE) begin
         for(i=0;i<`REGSIZESCALAR;i=i+1)begin
             reg_value[i] <= `NULL32;
             renamed[i] <= `FALSE;
@@ -50,7 +49,7 @@ always @(posedge clk)begin
                 end
                 if({27'b0,from_decoder_rd_index}==i) begin
                     reg_rename[i] <= decoder_rd_rename;
-                    renamed <= `TRUE;
+                    renamed[i] <= `TRUE;
                 end
             end
         end
