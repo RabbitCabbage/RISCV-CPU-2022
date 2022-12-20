@@ -1,4 +1,4 @@
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
+`include "define.v"
 module IF(
     input wire clk,
     input wire rst,
@@ -6,7 +6,7 @@ module IF(
     // with regard to jumping
     // from ROB
     input wire jump_wrong,
-    input wire[`ADDR] jump_pc,
+    input wire[`ADDR] jump_pc_from_rob,
     
     // fetch instr from ICache
     // give out an addr and get an instr
@@ -19,40 +19,49 @@ module IF(
     // send out instr and wether jumping
     // if lsb or rob is full, then fetching should be stalled
     input wire stall_IF,
-    output reg [`INSTRLEN] instr_to_decode,
+    output wire [`INSTRLEN] instr_to_decode,
     output reg [`ADDR] pc_to_decoder,
-    output reg IF_success,
+    output wire IF_success,
 
     // from predictor
-    output reg is_jump_instr,//todo
-    input wire jump_prediction
+    
+    output wire[`ADDR] instr_to_predictor,
+    output wire [`ADDR] instr_pc_to_predictor,
+    input wire is_jump_instr,
+    input wire jump_prediction,
+    input wire [`ADDR] jump_pc_from_predictor
     //表示的是上一个指令是否是跳转指令，以及predict是否跳转
 );
 reg [`ADDR] pc;
+
+assign IF_success = icache_success;
+assign instr_to_decode = instr_fetched;
+assign instr_to_predictor = instr_fetched;
+assign instr_pc_to_predictor = pc;
+
 always @(posedge clk) begin
-    if (rst) begin
+    if (rst == `TRUE) begin
         icache_enable <= `FALSE;
-        pc_to_fetch <= `NULL32;
         pc <= `NULL32;
-    end
-    if(rdy==`TRUE && stall_IF==`FALSE) begin
+    end else if(rdy==`TRUE && stall_IF==`FALSE) begin
         if(jump_wrong==`TRUE) begin
-            pc_to_fetch <= jump_pc;
+            pc = jump_pc_from_rob;
         end else begin
-            if(is_jump_instr==`TRUE) begin
-                if(jump_prediction==`TRUE)begin
-                    pc_to_fetch <= jump_pc;
+            if(IF_success == `TRUE) begin//如果之前已经fetch成功了
+                pc_to_decoder = pc;
+                if(is_jump_instr==`TRUE) begin
+                    if(jump_prediction==`TRUE)begin
+                        pc = jump_pc_from_predictor;
+                    end else begin
+                        pc = pc + 4;
+                    end
                 end else begin
-                    pc_to_fetch <= pc + 4;
+                    pc = pc + 4;
                 end
             end
         end
-        icache_enable <= `TRUE;
-        if(icache_success ==`TRUE) begin
-            instr_to_decode <= instr_fetched;
-            pc_to_decoder <= pc;
-            IF_success <= `TRUE;
-        end
+        icache_enable = `TRUE;
+        pc_to_fetch = pc;//再去fetch下一个pc
     end
 end
 endmodule

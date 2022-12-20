@@ -1,4 +1,4 @@
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
+`include "define.v"
 module ROB(
     //control signals
     input wire clk,
@@ -9,7 +9,7 @@ module ROB(
     output reg [`DATALEN] to_lsb_value,
     output reg [`LSBINSTRLEN] to_lsb_size,
     output reg [`ADDR] to_lsb_addr,
-    output wire rob_enable_lsb_read,
+    output reg rob_enable_lsb_read,
     input wire [`DATALEN] from_lsb_data,
     //commit to register file
     output reg [`REGINDEX] to_reg_rd,
@@ -18,7 +18,7 @@ module ROB(
 
     //interact with decoder
     //tell decoder the rob line free
-    output reg [`ROBINDEX] rob_free_tag,
+    output wire [`ROBINDEX] rob_free_tag,
     input wire decoder_input_enable,
     input wire [`ROBINDEX] decoder_rd_rename,
     // decoder fetches value from rob
@@ -26,12 +26,13 @@ module ROB(
     input wire [`ROBINDEX] decoder_fetch_rs2_index,
     output wire to_decoder_rs1_ready,
     output wire to_decoder_rs2_ready,
-    output reg [`DATALEN] to_decoder_rs1_value,
-    output reg [`DATALEN] to_decoder_rs2_value,
+    output wire [`DATALEN] to_decoder_rs1_value,
+    output wire [`DATALEN] to_decoder_rs2_value,
     input wire [`OPLEN] decoder_op,
     input wire [`ADDR] decoder_pc,
     input wire predicted_jump,
     input wire [`REGINDEX] decoder_destination_reg_index,//from decoder
+    input wire decoder_ask_for_free_tag_for_rd,
 
 
     input wire [`ADDR] lsb_destination_mem_addr,//from lsb 如果lsb算出来了一个destination就会送过来
@@ -49,12 +50,12 @@ module ROB(
     input wire [`DATALEN] lsb_addr,
     input wire [`ROBINDEX] lsb_update_rename,
 
-    output wire rob_broadcast,
+    output reg rob_broadcast,
     output reg [`ROBINDEX] rob_update_rename,
     output reg [`DATALEN] rob_cbd_value,
 
-    output wire rob_full,
-    output wire jump_wrong,
+    output reg rob_full,
+    output reg jump_wrong,
     output reg [`ADDR] jumping_pc,
 
     output reg to_predictor_enable,
@@ -74,9 +75,9 @@ reg is_store[`ROBSIZE];
 //rob的数据结构应该是一个循环队列，记下头尾,记住顺序
 reg [`ROBPOINTER] head;
 reg [`ROBPOINTER] tail;
-wire [`ROBPOINTER] next;
-wire [`ROBPOINTER] current;
-wire [`ROBINDEX] tmp;
+reg [`ROBPOINTER] next;
+reg [`ROBPOINTER] current;
+reg [`ROBINDEX] tmp;
 
 //因为decoder送进来的是4：0的index，有一位用作了表示无重命名
 //所以这里要取后面的3位作为indexing的下标
@@ -84,18 +85,24 @@ assign to_decoder_rs1_value = rd_value[decoder_fetch_rs1_index[3:0]];
 assign to_decoder_rs2_value = rd_value[decoder_fetch_rs2_index[3:0]];
 assign to_decoder_rs1_ready = ready[decoder_fetch_rs1_index[3:0]];
 assign to_decoder_rs2_ready = ready[decoder_fetch_rs2_index[3:0]];
-assign tmp = {1'b0,tail} % `ROBSIZESCALAR;
-assign next = tmp[3:0];
-assign tmp = {1'b0,head} % `ROBSIZESCALAR;
-assign current = tmp[3:0];
 assign rob_free_tag = (next != head)? {1'b0,next}: 16;
-assign rob_full = (next == head);
 
 integer i;
+
+initial begin
+    rob_full <= `FALSE;
+    head <= 0;
+    tail <= 1;
+end
+
 always @(posedge clk) begin
+    tmp = {1'b0,tail} % `ROBSIZESCALAR;
+    next = tmp[3:0];
+    tmp = {1'b0,head} % `ROBSIZESCALAR;
+    current = tmp[3:0];
     if(rst == `TRUE ||(rdy == `TRUE && jump_wrong == `TRUE)) begin
-        head <= 1;
-        tail <= 1;
+        head <= 0;
+        tail <= 0;
         to_reg_rd <= `NULL5;
         rob_enable_lsb_write <= `FALSE;
         rob_enable_lsb_read <= `FALSE;
@@ -113,7 +120,8 @@ always @(posedge clk) begin
         end
     end else if(rdy == `TRUE && jump_wrong == `FALSE) begin
         //commit the first instr;
-       if(ready[current]==`TRUE && head != tail) begin
+        rob_full = ((next == head) && (head != tail));
+       if(ready[current]==`TRUE && rob_full==`FALSE) begin
            case(op[current])
                `SB: begin
                     to_lsb_size <= `REQUIRE8;

@@ -1,4 +1,4 @@
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
+`include "define.v"
 module LSB(
     //control signals
     input wire clk,
@@ -35,10 +35,10 @@ module LSB(
     output reg [`DATALEN] to_rob_data_loaded,
 
     //to rob, tell rob the addr has been calculated
-    output wire lsb_calculated_addr_signal,
-    output wire [`ADDR]lsb_destination_addr_to_rob,
-    output wire [`ROBINDEX] lsb_rename_to_rob,
-    output wire [`ADDR] lsb_calculated_instr_pc,
+    output reg lsb_calculated_addr_signal,
+    output reg [`ADDR]lsb_destination_addr_to_rob,
+    output reg [`ROBINDEX] lsb_rename_to_rob,
+    output reg [`ADDR] lsb_calculated_instr_pc,
 
     //from alu cbd
     input wire alu_broadcast,
@@ -49,11 +49,11 @@ module LSB(
     input wire [`DATALEN] rob_cbd_value,
     input wire [`ROBINDEX] rob_update_rename,
     // 将自己load结果发到cbd
-    output wire lsb_broadcast,
+    output reg lsb_broadcast,
     output reg [`DATALEN] lsb_cbd_value,
     output reg [`ROBINDEX] lsb_update_rename,
     output reg [`ADDR] lsb_cbd_addr,
-    output wire lsb_full
+    output reg lsb_full
 );
 reg                 busy[`LSBSIZE];
 reg [`ADDR]         pc[`LSBSIZE];
@@ -66,16 +66,16 @@ reg [`DATALEN]      rs1_value[`LSBSIZE];
 reg [`DATALEN]      rs2_value[`LSBSIZE];
 reg [`ROBINDEX]     rs1_rename[`LSBSIZE];
 reg [`ROBINDEX]     rs2_rename[`LSBSIZE];
-reg                 calculate_ready[`LSBSIZE];
-reg                 issue_ready[`LSBSIZE];
+wire                 calculate_ready[`LSBSIZE];
+wire                 issue_ready[`LSBSIZE];
 
 //rob的数据结构应该是一个循环队列，记下头尾,记住顺序
 reg [`LSBPOINTER]   head;
 reg [`LSBPOINTER]   tail;
-reg [`LSBPOINTER]   current;
-reg [`LSBPOINTER]   next;
-reg [`LSBINDEX]     tmp;
-reg [`LSBINDEX]     to_calculate;
+wire [`LSBPOINTER]   current;
+wire [`LSBPOINTER]   next;
+wire [`LSBINDEX]     tmp;
+wire [`LSBINDEX]     to_calculate;
 assign tmp = {1'b0,head} % 16;
 assign current = tmp[3:0];
 assign tmp = {1'b0,tail} % 16;
@@ -100,22 +100,23 @@ assign to_calculate = (calculate_ready[0] ? 0 :(
 genvar i;
 generate 
     for(i=0;i<`LSBSIZESCALAR;i=i+1) begin
-        assign issue_ready[i] = (busy[i]==`TRUE && (addr_ready[i]==`TRUE && rs2_rename[i] == `ROBNOTRENAME));
-        assign calculate_ready[i] = (busy[i]==`TRUE && (addr_ready[i]==`FALSE && rs1_rename[i] == `ROBNOTRENAME));
+        assign issue_ready[i] = (rst == `FALSE && jump_wrong == `FALSE &&busy[i]==`TRUE && addr_ready[i]==`TRUE && rs2_rename[i] == `ROBNOTRENAME);
+        assign calculate_ready[i] = (rst == `FALSE && jump_wrong == `FALSE &&busy[i]==`TRUE && addr_ready[i]==`FALSE && rs1_rename[i] == `ROBNOTRENAME);
     end
 endgenerate
 integer j;
+initial begin
+    lsb_full <= `FALSE;
+end
 always @(posedge clk) begin
     if(rst == `TRUE || (rdy == `TRUE && jump_wrong == `TRUE)) begin
-        head <= 1;
-        tail <= 1;
+        head <= 0;
+        tail <= 0;
         lsb_write_signal <= `FALSE;
         lsb_read_signal <= `FALSE;
         lsb_full <= `FALSE;
         for(j=0;j<`LSBSIZESCALAR;j=j+1)begin
             busy[j] <= `FALSE;
-            calculate_ready[j] <= `FALSE;
-            issue_ready[j] <= `FALSE;
             addr_ready [j] <= `FALSE;
             destination_mem_addr[j] <= `NULL32;
         end

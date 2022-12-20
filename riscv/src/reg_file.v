@@ -1,4 +1,4 @@
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
+`include "define.v"
 module RegFile(
     //control signals
     input wire clk,
@@ -12,10 +12,10 @@ module RegFile(
     input wire [`ROBINDEX] decoder_rd_rename,
     output wire rs1_renamed,
     output wire rs2_renamed,
-    output reg [`DATALEN] to_decoder_rs1_value,
-    output reg [`DATALEN] to_decoder_rs2_value,
-    output reg [`ROBINDEX] to_decoder_rs1_rename,
-    output reg [`ROBINDEX] to_decoder_rs2_rename,
+    output wire [`DATALEN] to_decoder_rs1_value,
+    output wire [`DATALEN] to_decoder_rs2_value,
+    output wire [`ROBINDEX] to_decoder_rs1_rename,
+    output wire [`ROBINDEX] to_decoder_rs2_rename,
 
     // from ROB
     input wire [`REGINDEX] rob_commit_index,

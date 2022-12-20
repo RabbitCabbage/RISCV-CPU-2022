@@ -1,4 +1,4 @@
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
+`include "define.v"
 
 module ALU(
     //control signals
@@ -16,7 +16,7 @@ module ALU(
     
     // to RS and ROB
     output reg [`DATALEN] result,
-    output wire alu_broadcast,
+    output reg alu_broadcast,
     output reg [`ROBINDEX] out_rd_rename,
     output reg [`ADDR] jumping_pc
 );

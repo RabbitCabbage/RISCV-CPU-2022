@@ -1,4 +1,4 @@
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
+`include "define.v"
 module RS(
     //control signals
     input wire clk,
@@ -52,10 +52,10 @@ reg [`IMMLEN] imm[`RSSIZE];
 reg ready[`RSSIZE];
 reg busy[`RSSIZE];
 reg [`ADDR] pc[`RSSIZE];
-reg [`RSINDEX] free_index;//表示的是哪一个RS是空的可以用的
+wire [`RSINDEX] free_index;//表示的是哪一个RS是空的可以用的
 reg [`RSINDEX] ready_index; //表达hi说的是哪一个RS已经ready了可以进行计算了
-reg stall_IF;
-reg [`RSINDEX] issue_index;
+wire stall_IF;
+wire [`RSINDEX] issue_index;
 
 assign stall_IF                       = (free_index == `RSNOTFOUND);//如果找不到空的RS，则说明RS满了，那么就应该停IF。
 assign free_index                     = ~busy[0] ? 0:  
@@ -90,13 +90,16 @@ assign issue_index                    = ~ready[0] ? 0:
                                                                         ~ready[13] ? 13 :
                                                                             ~ready[14] ? 14 : 
                                                                                 ~ready[15] ? 15 : `RSNOTFOUND;
+initial begin
+    rs_full <= `FALSE;
+end
 integer i;
 always @(posedge clk) begin
     if(rst==`TRUE || jump_wrong==`TRUE) begin
         alu_enable                    <=  `FALSE;
         for(i=0;i<32;i=i+1) begin
             busy[i]                   <= `FALSE;
-            opcode[i]                 <= 6'0;
+            opcode[i]                 <= 6'b000000;
         end
     end else if (rdy) begin
         // 如果在RS中又ready的index；

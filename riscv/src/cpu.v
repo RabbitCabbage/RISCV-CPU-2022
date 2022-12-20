@@ -1,19 +1,16 @@
 // RISCV32I CPU top module
 // port modification allowed for debugging purposes
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/alu.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/decoder.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/icache.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/ifetch.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/hci.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/lsb.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/mem_ctrl.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/ram.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/reg_file.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/riscv_top.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/rob.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/rs.v"
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/predictor.v"
+`include "define.v"
+`include "alu.v"
+`include "decoder.v"
+`include "icache.v"
+`include "ifetch.v"
+`include "lsb.v"
+`include "mem_ctrl.v"
+`include "reg_file.v"
+`include "rob.v"
+`include "rs.v"
+`include "predictor.v"
 
 module cpu(
   input  wire                 clk_in,     // system clock signal
@@ -48,7 +45,7 @@ wire rob_full;
 wire lsb_full;
 wire stall_IF;
 wire stall_decoder;
-assign stall_IF = rs_full || rob_full || lsb_full;
+assign stall_IF = (rs_full==`TRUE || rob_full==`TRUE || lsb_full==`TRUE);
 
 //icache and ifetch
 wire if_enable_icache;
@@ -110,15 +107,12 @@ wire [`REGINDEX] decoder_rs1_index_to_rob;
 wire [`REGINDEX] decoder_rs2_index_to_rob;
 wire [`OPLEN] decoder_op_to_rob;
 wire [`REGINDEX] decoder_rd_index_to_rob;
+wire decoder_ask_for_free_tag_for_rd;
 //reg and rob
 wire [`REGINDEX] rob_rd_index_to_reg;
 wire [`ROBINDEX] rob_rd_rename_to_reg;
 wire [`DATALEN] rob_rd_value_to_reg;
 //memctrl and ram
-wire memctrl_read_write_to_ram;
-wire [`ADDR] memctrl_addr_to_ram;
-wire [`BYTELEN] ram_load_byte_to_memctrl;
-wire [`BYTELEN] memctrl_store_byte_to_ram;
 wire memctrl_enable_ram;
 
 //memctrl and lsb
@@ -167,18 +161,26 @@ wire [`ROBINDEX] lsb_calculated_instr_rd_rename_to_rob;
 
 //rob out jumping information
 // predictor and rob&if
-wire if_ask_for_prediction;
+wire [`INSTRLEN]if_instr_to_ask_for_prediction;
+wire predictor_is_jump_instr_to_if;
 wire predictor_predicted_jump;
+wire [`ADDR] predictor_jump_pc_to_if;
+wire [`ADDR] if_instr_pc_to_predictor;
+
 wire rob_real_jump_to_predictor;
 wire [`PREDICTORINDEX] rob_branch_instr_pc_itself;
 wire [`ADDR] rob_real_destination_pc;
 wire rob_enable_predictor;
 
 
+// initial begin
+//   assign rs_full = `FALSE;
+//   assign rob_full = `FALSE;
+//   assign lsb_full = `FALSE;
+// end
 
 
-
-ROB ROB
+ROB rob_
     (
       .clk                           (clk_in),
       .rdy                           (rdy_in),
@@ -209,6 +211,7 @@ ROB ROB
       .from_lsb_rename               (lsb_calculated_instr_rd_rename_to_rob),
       .from_lsb_pc                   (lsb_calculated_instr_pc_to_rob),
       .decoder_destination_reg_index (decoder_rd_index_to_rob),
+      .decoder_ask_for_free_tag_for_rd(decoder_ask_for_free_tag_for_rd),
       .alu_broadcast                 (alu_broadcast),
       .alu_cbd_value                 (alu_broadcast_result),
       .alu_jumping_pc                (alu_broadcast_jump_pc),
@@ -227,17 +230,13 @@ ROB ROB
       .to_predictor_jump             (rob_real_jump_to_predictor),//告诉predictor真实的情况
       .to_predictor_pc               (rob_branch_instr_pc_itself)//输出跳错的指令本身的pc
     );
-
-
-
-
-IF IF
+IF if_
     (
       .clk             (clk_in),
       .rst             (rst_in),
       .rdy             (rdy_in),
       .jump_wrong      (jump_wrong),
-      .jump_pc         (rob_real_destination_pc),
+      .jump_pc_from_rob         (rob_real_destination_pc),
       .icache_enable   (if_enable_icache),
       .pc_to_fetch     (if_pc_to_icache),
       .instr_fetched   (icache_instr_to_if),
@@ -246,11 +245,13 @@ IF IF
       .instr_to_decode (if_instr_to_decoder),
       .pc_to_decoder   (if_pc_to_decoder),
       .IF_success      (if_success_to_decoder),
-      .is_jump_instr   (if_ask_for_prediction),
-      .jump_prediction (predictor_predicted_jump)
+      .instr_pc_to_predictor(if_instr_pc_to_predictor),
+      .instr_to_predictor(if_instr_to_ask_for_prediction),
+      .is_jump_instr   (predictor_is_jump_instr_to_if),
+      .jump_prediction (predictor_predicted_jump),
+      .jump_pc_from_predictor(predictor_jump_pc_to_if)
     );
-  
-ICache ICache
+ICache icache_
     (
       .clk               (clk_in),
       .rst               (rst_in),
@@ -264,7 +265,7 @@ ICache ICache
       .mem_enable        (icache_enable_memctrl),
       .mem_fetch_success (memctrl_success_to_icache)
     );
-Decoder Decoder
+Decoder decoder_
     (
       .clk                          (clk_in),
       .rst                          (rst_in),
@@ -307,9 +308,10 @@ Decoder Decoder
       .rob_fetch_rs1_index          (decoder_rs1_index_to_rob),
       .rob_fetch_rs2_index          (decoder_rs2_index_to_rob),
       .to_rob_op                    (decoder_op_to_rob),
-      .to_rob_destination_reg_index (decoder_rd_index_to_rob)
+      .to_rob_destination_reg_index (decoder_rd_index_to_rob),
+      .ask_for_free_tag             (decoder_ask_for_free_tag_for_rd)
     );
-RegFile RegFile
+RegFile regfile_
     (
       .clk                    (clk_in),
       .rst                    (rst_in),
@@ -328,16 +330,16 @@ RegFile RegFile
       .rob_commit_rename      (rob_rd_rename_to_reg),
       .rob_commit_value       (rob_rd_value_to_reg)
     );
-RAM RAM 
-  (
-      .clk_in  (clk_in),
-      .en_in   (memctrl_enable_ram),
-      .r_nw_in (memctrl_read_write_to_ram),
-      .a_in    (memctrl_addr_to_ram[16:0]),
-      .d_in    (memctrl_store_byte_to_ram),
-      .d_out   (ram_load_byte_to_memctrl)
-    );
-MemCtrl MemCtrl
+// RAM ram_
+//   (
+//       .clk_in  (clk_in),
+//       .en_in   (memctrl_enable_ram),
+//       .r_nw_in (memctrl_read_write_to_ram),
+//       .a_in    (memctrl_addr_to_ram[16:0]),
+//       .d_in    (memctrl_store_byte_to_ram),
+//       .d_out   (ram_load_byte_to_memctrl)
+//     );
+MemCtrl memctrl_
     (
       .clk                (clk_in),
       .rdy                (rdy_in),
@@ -356,13 +358,13 @@ MemCtrl MemCtrl
       .icache_read_instr  (memctrl_instr_to_icache),
       .icache_success     (memctrl_success_to_icache),
       .io_buffer_full     (io_buffer_full),
-      .mem_addr           (memctrl_addr_to_ram),
-      .mem_byte_write     (memctrl_store_byte_to_ram),
-      .mem_byte_read      (ram_load_byte_to_memctrl),
-      .read_write         (memctrl_read_write_to_ram),
-      .mem_enable         (memctrl_enable_ram)
+      .mem_addr           (mem_a),
+      .mem_byte_write     (mem_dout),
+      .mem_byte_read      (mem_din),
+      .read_write         (mem_wr),
+      .mem_enable         (memctrl_enable_ram)//todo
     );
-ALU ALU
+ALU alu_
     (
       .clk           (clk_in),
       .rdy           (rdy_in),
@@ -379,7 +381,7 @@ ALU ALU
       .out_rd_rename (alu_broadcast_rd_rename),
       .jumping_pc    (alu_broadcast_jump_pc)
     );
-RS RS
+RS rs_
     (
       .clk                (clk_in),
       .rst                (rst_in),
@@ -412,7 +414,7 @@ RS RS
       .to_alu_pc          (rs_addr_to_alu),
       .rs_full            (rs_full)
     );
-LSB LSB
+LSB lsb_
     (
       .clk                (clk_in),
       .rdy                (rdy_in),
@@ -456,17 +458,21 @@ LSB LSB
       .lsb_rename_to_rob          (lsb_calculated_instr_rd_rename_to_rob),
       .lsb_calculated_instr_pc    (lsb_calculated_instr_pc_to_rob)
       );
-Predictor Predictor
+Predictor predictor_
     (
       .clk                        (clk_in),
       .rst                        (rst_in),
       .rdy                        (rdy_in),
+      .if_success                 (if_success_to_decoder),
+      .if_instr_to_ask_for_prediction(if_instr_to_ask_for_prediction),
+      .if_instr_pc_itself         (if_instr_pc_to_predictor),
       .rob_enable_predictor       (rob_enable_predictor),
-      .if_ask_for_prediction      (if_ask_for_prediction),
+      .is_jump_instr              (predictor_is_jump_instr_to_if),
       .predicted_jump             (predictor_predicted_jump),
+      .predict_jump_pc(predictor_jump_pc_to_if),
       .real_jump_or_not           (rob_real_jump_to_predictor),
       .instr_pc                   (rob_branch_instr_pc_itself),
-      .jump_to_pc                 (rob_real_destination_pc)
+      .jump_to_pc_from_rob        (rob_real_destination_pc)
     );
 
 endmodule

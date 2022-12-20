@@ -1,4 +1,4 @@
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
+`include "define.v"
 
 // get instructions from if, 
 //and then decode them and send them to rs
@@ -21,7 +21,7 @@ module Decoder(
     output reg [`DATALEN] to_rs_imm,
     output reg [`DATALEN] to_rs_rs1_value,
     output reg [`DATALEN] to_rs_rs2_value,
-    output reg [`OPLEN] to_rs_op,
+    output wire [`OPLEN] to_rs_op,
     output wire [`ADDR] decode_pc,
 
     // to lsb
@@ -31,7 +31,7 @@ module Decoder(
     output reg [`DATALEN] to_lsb_rs1_value,
     output reg [`DATALEN] to_lsb_rs2_value,
     output reg [`IMMLEN] to_lsb_imm,
-    output reg [`OPLEN] to_lsb_op,
+    output wire [`OPLEN] to_lsb_op,
 
     //from regfile
     //from regfile ask the information about registers
@@ -54,11 +54,13 @@ module Decoder(
     input wire rob_rs1_ready,
     input wire [`DATALEN] rob_fetch_rs2_value,
     input wire rob_rs2_ready,
-    output reg [`ROBINDEX] rob_fetch_rs1_index,
-    output reg [`ROBINDEX] rob_fetch_rs2_index,
-    output reg [`OPLEN] to_rob_op,
-    output reg [`REGINDEX] to_rob_destination_reg_index
+    output wire [`ROBINDEX] rob_fetch_rs1_index,
+    output wire [`ROBINDEX] rob_fetch_rs2_index,
+    output wire [`OPLEN] to_rob_op,
+    output reg [`REGINDEX] to_rob_destination_reg_index,
+    output reg ask_for_free_tag
 );
+//todo 把freetag赋值的时间点明显不对
 
 //记下decode的结果
 reg [`OPLEN] op;
@@ -71,6 +73,7 @@ wire [`DATALEN] rs1_value;
 wire [`DATALEN] rs2_value;
 wire [`ROBINDEX] rs1_rename;
 wire [`ROBINDEX] rs2_rename;
+wire [`OPCODE] opcode;
 
 assign to_reg_rs1_index                      = rs1;//从instr中读出来的rs1，送给regfile
 assign to_reg_rs2_index                      = rs2;//从instr中读出rs2，送给regfile
@@ -82,7 +85,10 @@ assign rs1_value                             = (reg_rs1_renamed==`FALSE)?reg_rs1
 assign rs2_value                             = (reg_rs2_renamed==`FALSE)?reg_rs2_value:(rob_rs2_ready==`TRUE)?rob_fetch_rs2_value:`NULL32;
 assign rs1_rename                            = (reg_rs1_renamed==`FALSE)?`ROBNOTRENAME:(rob_rs1_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs1_rob_rename;
 assign rs2_rename                            = (reg_rs2_renamed==`FALSE)?`ROBNOTRENAME:(rob_rs2_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs2_rob_rename;
-
+assign opcode = instr[`OPCODE];
+assign to_rob_op = op;
+assign to_rs_op = op;
+assign to_lsb_op = op;
 always @(posedge clk) begin
     //rst has nothing on this module, because this module has nothing stored in itself.
 
@@ -102,13 +108,14 @@ always @(posedge clk) begin
                 rd                           <= instr[11:7];
                 imm                          <= {{21{instr[31]}},instr[30:20]};
                 //把得到的结果传给lsb
-                to_rob_op                    <= op;
-                to_lsb_op                    <= op;
-                to_lsb_imm                   <= imm;
+                //to_rob_op                    <= op;
+                //to_lsb_op                    <= op;
+                to_lsb_imm                   <= {{21{instr[31]}},instr[30:20]};
                 to_lsb_rd_rename             <= rob_free_tag;
                 to_lsb_rs1_value             <= rs1_value;
                 to_lsb_rs1_rename            <= rs1_rename;
-                to_rob_destination_reg_index <= rd;
+                to_rob_destination_reg_index <= instr[11:7];
+                ask_for_free_tag             <= `TRUE;
             end
             7'b0010011: begin
                 case(instr[`FUNC3])
@@ -132,23 +139,25 @@ always @(posedge clk) begin
                 rd                           <= instr[11:7];
                 imm                          <= {{21{instr[31]}},instr[30:20]};
                 //吧得到的结果传给rs
-                to_rs_op                     <= op;
-                to_rob_op                    <= op;
-                to_rs_imm                    <= imm;
+                //to_rs_op                     <= op;
+                //to_rob_op                    <= op;
+                to_rs_imm                    <= {{21{instr[31]}},instr[30:20]};
                 to_rs_rs1_rename             <= rs1_rename;
                 to_rs_rs1_value              <= rs1_value;
                 to_rs_rd_rename              <= rob_free_tag;
-                to_rob_destination_reg_index <= rd;
+                to_rob_destination_reg_index <= instr[11:7];
+                ask_for_free_tag             <= `TRUE;
             end
             7'b0010111: begin
                 op                           <= `AUIPC;
                 rd                           <= instr[11:7];
                 imm                          <= {instr[31:12],12'b0};
                 to_rs_rd_rename              <= rob_free_tag;
-                to_rs_imm                    <= imm;
-                to_rs_op                     <= op;
-                to_rob_op                    <= op;
-                to_rob_destination_reg_index <= rd;
+                to_rs_imm                    <= {instr[31:12],12'b0};
+                //to_rs_op                     <= op;
+                //to_rob_op                    <= op;
+                to_rob_destination_reg_index <= instr[11:7];
+                ask_for_free_tag             <= `TRUE;
             end
             7'b0100011: begin
                 case(instr[`FUNC3])
@@ -160,13 +169,14 @@ always @(posedge clk) begin
                 rs1                          <= instr[19:15];
                 rs2                          <= instr[24:20];
                 imm                          <= {{21{instr[31]}},instr[30:25],instr[11:7]};
-                to_rob_op                    <= op;
-                to_lsb_op                    <= op;
-                to_lsb_imm                   <= imm;
+                //to_rob_op                    <= op;
+                //to_lsb_op                    <= op;
+                to_lsb_imm                   <= {{21{instr[31]}},instr[30:25],instr[11:7]};
                 to_lsb_rs1_value             <= rs1_value;
                 to_lsb_rs1_rename            <= rs1_rename;
                 to_lsb_rs2_value             <= rs2_value;
                 to_lsb_rs2_rename            <= rs2_rename;
+                ask_for_free_tag             <= `FALSE;
             end
             7'b0110011: begin
                 case(instr[`FUNC3])
@@ -199,19 +209,21 @@ always @(posedge clk) begin
                 to_rs_rs1_rename             <= rs1_rename;
                 to_rs_rs2_rename             <= rs2_rename;
                 to_rs_rd_rename              <= rob_free_tag;
-                to_rs_op                     <= op;
-                to_rob_op                    <= op;
-                to_rob_destination_reg_index <= rd;
+                //to_rs_op                     <= op;
+                //to_rob_op                    <= op;
+                to_rob_destination_reg_index <= instr[11:7];
+                ask_for_free_tag             <= `TRUE;
             end
             7'b0110111: begin
                 op                           <= `LUI;
                 rd                           <= instr[11:7];
                 imm                          <= {instr[31:12],12'b0};
-                to_rs_imm                    <= imm;
-                to_rob_op                    <= op;
-                to_rs_op                     <= op;
+                to_rs_imm                    <= {instr[31:12],12'b0};
+                //to_rob_op                    <= op;
+                //to_rs_op                     <= op;
                 to_rs_rd_rename              <= rob_free_tag;
-                to_rob_destination_reg_index <= rd;
+                to_rob_destination_reg_index <= instr[11:7];
+                ask_for_free_tag             <= `TRUE;
             end
             7'b1100011: begin
                 case(instr[`FUNC3])
@@ -230,9 +242,10 @@ always @(posedge clk) begin
                 to_rs_rs2_value              <= rs2_value;
                 to_rs_rs1_rename             <= rs1_rename;
                 to_rs_rs2_rename             <= rs2_rename;
-                to_rs_imm                    <= imm;
-                to_rs_op                     <= op;
-                to_rob_op                    <= op;
+                to_rs_imm                    <= {{20{instr[31]}},instr[7],instr[30:25],instr[11:8],1'b0};
+                //to_rs_op                     <= op;
+                //to_rob_op                    <= op;
+                ask_for_free_tag             <= `FALSE;
             end
             7'b1100111: begin
                 op                           <= `JALR;
@@ -242,20 +255,22 @@ always @(posedge clk) begin
                 to_rs_rs1_value              <= rs1_value;
                 to_rs_rs1_rename             <= rs1_rename;
                 to_rs_rd_rename                 <= rob_free_tag;
-                to_rs_imm                    <= imm;
-                to_rs_op                     <= op;
-                to_rob_op                    <= op;
-                to_rob_destination_reg_index <= rd;
+                to_rs_imm                    <= {{21{instr[31]}},instr[30:20]};
+                //to_rs_op                     <= op;
+                //to_rob_op                    <= op;
+                to_rob_destination_reg_index <= instr[11:7];
+                ask_for_free_tag             <= `TRUE;
             end
             7'b1101111: begin
                 op                           <= `JAL;
                 imm                          <= {{12{instr[31]}},instr[19:12],instr[20],instr[30:21],1'b0};
                 rd                           <= instr[11:7];
                 to_rs_rd_rename                 <= rob_free_tag;
-                to_rs_imm                    <= imm;
-                to_rs_op                     <= op;
-                to_rob_op                    <= op;
-                to_rob_destination_reg_index <= rd;
+                to_rs_imm                    <=  {{12{instr[31]}},instr[19:12],instr[20],instr[30:21],1'b0};
+                //to_rs_op                     <= op;
+                //to_rob_op                    <= op;
+                to_rob_destination_reg_index <= instr[11:7];
+                ask_for_free_tag             <= `TRUE;
             end
             default:begin end
          endcase

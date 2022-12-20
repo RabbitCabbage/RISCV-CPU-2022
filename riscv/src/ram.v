@@ -1,6 +1,6 @@
-`include "D:/Desktop/RISCV-CPU-2022/riscv/src/define.v"
+// implements 128KB of on-board RAM
 
-module RAM
+module ram
 #(
   parameter ADDR_WIDTH = 17
 )
