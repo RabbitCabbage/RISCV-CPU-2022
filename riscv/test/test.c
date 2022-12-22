@@ -1,6 +1,25 @@
-int main(){
-    int a = 5;
-    int b = a + 1;
-    int c = a + 2;
-    return 0;
+#include "io.h"
+//input: 1 2 3 4
+
+int a[4];
+int main()
+{
+    int b[4];
+	int i;
+    for (i = 0; i < 4; i++)
+	{
+		a[i] = 0;
+		b[i] = i + 1;
+	}
+	for (i = 0; i < 4; i++)
+	{
+		outl(a[i]);
+	}
+	println("");
+	int *p;
+	p=b;
+	for (i = 0; i < 4; i++)
+	{
+		outl(p[i]);
+	}
 }
