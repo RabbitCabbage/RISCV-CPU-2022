@@ -18,12 +18,17 @@ module ALU(
     output reg [`DATALEN] result,
     output reg alu_broadcast,
     output reg [`ROBINDEX] out_rd_rename,
-    output reg [`ADDR] jumping_pc
+    output reg [`ADDR] jumping_pc,
+    output reg [`OPLEN] alu_broadcast_op
 );
 always @(posedge clk) begin
-    if(rdy && alu_enable) begin
+    if(rst==`TRUE)begin
+        alu_broadcast <= `FALSE;
+    end else
+    if(rdy==`TRUE && alu_enable==`TRUE) begin
         out_rd_rename         <= in_rd_rename;
         alu_broadcast         <= `TRUE;
+        alu_broadcast_op      <= op;
         case(op)
             `ADD: result      <= rs1_value+rs2_value;
             `ADDI: result     <= rs1_value+imm;
@@ -86,6 +91,8 @@ always @(posedge clk) begin
             end
             default:begin end
         endcase
+    end else begin
+        alu_broadcast <= `FALSE;
     end
 end
 endmodule

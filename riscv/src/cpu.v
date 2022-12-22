@@ -45,7 +45,7 @@ wire rob_full;
 wire lsb_full;
 wire stall_IF;
 wire stall_decoder;
-assign stall_IF = (rs_full==`TRUE || rob_full==`TRUE || lsb_full==`TRUE);
+
 
 //icache and ifetch
 wire if_enable_icache;
@@ -95,6 +95,8 @@ wire [`REGINDEX] decoder_rs1_index_to_reg;
 wire [`REGINDEX] decoder_rs2_index_to_reg;
 wire [`REGINDEX] decoder_rd_index_to_reg;
 wire [`ROBINDEX] decoder_rd_rename_to_reg;
+wire decoder_instr_need_rs1_to_reg;
+wire decoder_instr_need_rs2_to_reg;
 
 //decoder and rob
 wire [`ROBINDEX] decoder_rd_rename_to_rob;
@@ -107,11 +109,13 @@ wire [`REGINDEX] decoder_rs1_index_to_rob;
 wire [`REGINDEX] decoder_rs2_index_to_rob;
 wire [`OPLEN] decoder_op_to_rob;
 wire [`REGINDEX] decoder_rd_index_to_rob;
-wire decoder_ask_for_free_tag_for_rd;
+wire decode_instr_need_rd;
+wire [`INSTRLEN] decoder_instr_to_rob;
 //reg and rob
 wire [`REGINDEX] rob_rd_index_to_reg;
 wire [`ROBINDEX] rob_rd_rename_to_reg;
 wire [`DATALEN] rob_rd_value_to_reg;
+wire rob_enable_regfile;
 //memctrl and ram
 wire memctrl_enable_ram;
 
@@ -147,7 +151,7 @@ wire [`DATALEN] rob_broadcast_result;
 wire [`ROBINDEX] rob_broadcast_rename;
 // rob and lsb
 //这个表示的是rob最后让lsb的commit，关于ram的commit由lsb代做
-wire rob_enable_lsb_read;
+//wire rob_enable_lsb_read;
 wire rob_enable_lsb_write;
 wire [`DATALEN]rob_store_data_to_lsb;
 wire [`ADDR] rob_addr_to_lsb;
@@ -171,6 +175,10 @@ wire rob_real_jump_to_predictor;
 wire [`PREDICTORINDEX] rob_branch_instr_pc_itself;
 wire [`ADDR] rob_real_destination_pc;
 wire rob_enable_predictor;
+wire predictor_stall_if;
+wire [`OPLEN]alu_broadcast_op;
+wire predictor_enable_if;
+assign stall_IF = (rs_full==`TRUE || rob_full==`TRUE || lsb_full==`TRUE || predictor_stall_if==`TRUE);
 
 
 // initial begin
@@ -189,14 +197,16 @@ ROB rob_
       .to_lsb_value                  (rob_store_data_to_lsb),
       .to_lsb_size                   (rob_length_lsb),
       .to_lsb_addr                   (rob_addr_to_lsb),
-      .rob_enable_lsb_read           (rob_enable_lsb_read),
+      //.rob_enable_lsb_read           (rob_enable_lsb_read),
       .from_lsb_data                 (lsb_load_data_to_rob),
       .to_reg_rd                     (rob_rd_index_to_reg),
       .to_reg_value                  (rob_rd_value_to_reg),
       .to_reg_rename                 (rob_rd_rename_to_reg),
       .rob_free_tag                  (rob_free_tag_to_decoder),
+      .enable_reg                    (rob_enable_regfile),
       .decoder_input_enable          (decoder_success_out),
       .decoder_rd_rename             (decoder_rd_rename_to_rob),
+      .decoder_instr                 (decoder_instr_to_rob),
       .decoder_fetch_rs1_index       (decoder_rs1_index_to_rob),
       .decoder_fetch_rs2_index       (decoder_rs2_index_to_rob),
       .to_decoder_rs1_ready          (rob_rs1_ready_to_decoder),
@@ -211,7 +221,6 @@ ROB rob_
       .from_lsb_rename               (lsb_calculated_instr_rd_rename_to_rob),
       .from_lsb_pc                   (lsb_calculated_instr_pc_to_rob),
       .decoder_destination_reg_index (decoder_rd_index_to_rob),
-      .decoder_ask_for_free_tag_for_rd(decoder_ask_for_free_tag_for_rd),
       .alu_broadcast                 (alu_broadcast),
       .alu_cbd_value                 (alu_broadcast_result),
       .alu_jumping_pc                (alu_broadcast_jump_pc),
@@ -249,7 +258,8 @@ IF if_
       .instr_to_predictor(if_instr_to_ask_for_prediction),
       .is_jump_instr   (predictor_is_jump_instr_to_if),
       .jump_prediction (predictor_predicted_jump),
-      .jump_pc_from_predictor(predictor_jump_pc_to_if)
+      .jump_pc_from_predictor(predictor_jump_pc_to_if),
+      .predictor_enable(predictor_enable_if)
     );
 ICache icache_
     (
@@ -272,7 +282,7 @@ Decoder decoder_
       .rdy                          (rdy_in),
       .IF_success                   (if_success_to_decoder),
       .instr                        (if_instr_to_decoder),
-      .fetch_pc                     (if_pc_to_icache),
+      .fetch_pc                     (if_pc_to_decoder),
       .decode_success               (decoder_success_out),
       .to_rs_rs1_rename             (decoder_rs1_rename_to_rs),
       .to_rs_rs2_rename             (decoder_rs2_rename_to_rs),
@@ -299,8 +309,11 @@ Decoder decoder_
       .to_reg_rs2_index             (decoder_rs2_index_to_reg),
       .to_reg_rd_rename             (decoder_rd_rename_to_reg),
       .to_reg_rd_index              (decoder_rd_index_to_reg),
+      .to_reg_need_rs1              (decoder_instr_need_rs1_to_reg),
+      .to_reg_need_rs2              (decoder_instr_need_rs2_to_reg),
       .rob_free_tag                 (rob_free_tag_to_decoder),
-      .to_rob_rd_rename             (decoder_rd_rename_to_reg),
+      .to_rob_rd_rename             (decoder_rd_rename_to_rob),
+      .to_rob_instr                 (decoder_instr_to_rob),
       .rob_fetch_rs1_value          (rob_rs1_value_to_decoder),
       .rob_rs1_ready                (rob_rs1_ready_to_decoder),
       .rob_fetch_rs2_value          (rob_rs2_value_to_decoder),
@@ -309,7 +322,7 @@ Decoder decoder_
       .rob_fetch_rs2_index          (decoder_rs2_index_to_rob),
       .to_rob_op                    (decoder_op_to_rob),
       .to_rob_destination_reg_index (decoder_rd_index_to_rob),
-      .ask_for_free_tag             (decoder_ask_for_free_tag_for_rd)
+      .instr_need_fill_rd             (decode_instr_need_rd)
     );
 RegFile regfile_
     (
@@ -319,6 +332,9 @@ RegFile regfile_
       .from_decoder_rs1_index (decoder_rs1_index_to_reg),
       .from_decoder_rs2_index (decoder_rs2_index_to_reg),
       .from_decoder_rd_index  (decoder_rd_index_to_reg),
+      .decoder_need_rs1       (decoder_instr_need_rs1_to_reg),
+      .decoder_need_rs2       (decoder_instr_need_rs2_to_reg),
+      .decoder_have_rd_waiting(decode_instr_need_rd),
       .decoder_rd_rename      (decoder_rd_rename_to_reg),
       .rs1_renamed            (reg_rs1_renamed_to_decoder),
       .rs2_renamed            (reg_rs2_renamed_to_decoder),
@@ -326,6 +342,7 @@ RegFile regfile_
       .to_decoder_rs2_value   (reg_rs2_value_to_decoder),
       .to_decoder_rs1_rename  (reg_rs1_rename_to_decoder),
       .to_decoder_rs2_rename  (reg_rs2_rename_to_decoder),
+      .rob_enable             (rob_enable_regfile),
       .rob_commit_index       (rob_rd_index_to_reg),
       .rob_commit_rename      (rob_rd_rename_to_reg),
       .rob_commit_value       (rob_rd_value_to_reg)
@@ -379,7 +396,8 @@ ALU alu_
       .result        (alu_broadcast_result),
       .alu_broadcast (alu_broadcast),
       .out_rd_rename (alu_broadcast_rd_rename),
-      .jumping_pc    (alu_broadcast_jump_pc)
+      .jumping_pc    (alu_broadcast_jump_pc),
+      .alu_broadcast_op(alu_broadcast_op)
     );
 RS rs_
     (
@@ -436,7 +454,7 @@ LSB lsb_
       .decoder_rs2_value  (decoder_rs2_value_to_lsb),
       .decoder_imm        (decoder_imm_to_lsb),
       .decoder_op         (decoder_op_to_lsb),
-      .rob_enable_lsb_read(rob_enable_lsb_read),
+      //.rob_enable_lsb_read(rob_enable_lsb_read),
       .rob_enable_lsb_write(rob_enable_lsb_write),
       .from_rob_addr      (rob_addr_to_lsb),
       .from_rob_length    (rob_length_lsb),
@@ -472,7 +490,12 @@ Predictor predictor_
       .predict_jump_pc(predictor_jump_pc_to_if),
       .real_jump_or_not           (rob_real_jump_to_predictor),
       .instr_pc                   (rob_branch_instr_pc_itself),
-      .jump_to_pc_from_rob        (rob_real_destination_pc)
+      .jump_to_pc_from_rob        (rob_real_destination_pc),
+      .predictor_stall_if         (predictor_stall_if),
+      .alu_broadcast              (alu_broadcast),
+      .alu_broadcast_op           (alu_broadcast_op),
+      .alu_jumping_pc             (alu_broadcast_jump_pc),
+      .predictor_enable_if        (predictor_enable_if)
     );
 
 endmodule

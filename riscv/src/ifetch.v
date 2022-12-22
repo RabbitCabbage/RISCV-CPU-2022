@@ -24,9 +24,9 @@ module IF(
     output wire IF_success,
 
     // from predictor
-    
+    input predictor_enable,
     output wire[`ADDR] instr_to_predictor,
-    output wire [`ADDR] instr_pc_to_predictor,
+    output reg [`ADDR] instr_pc_to_predictor,
     input wire is_jump_instr,
     input wire jump_prediction,
     input wire [`ADDR] jump_pc_from_predictor
@@ -37,31 +37,56 @@ reg [`ADDR] pc;
 assign IF_success = icache_success;
 assign instr_to_decode = instr_fetched;
 assign instr_to_predictor = instr_fetched;
-assign instr_pc_to_predictor = pc;
+always @(posedge IF_success) begin
+    instr_pc_to_predictor <= pc;
+end
+
+always @(posedge predictor_enable) begin
+    
+end
+integer begin_flag;
+reg wait_flag;
+always @(posedge predictor_enable) begin
+    wait_flag <= `TRUE;
+    if(is_jump_instr==`TRUE) begin
+                    if(jump_prediction==`TRUE)begin
+                        pc <= jump_pc_from_predictor;
+                        pc_to_fetch <= jump_pc_from_predictor;
+                    end else begin
+                        pc <= pc + 4;
+                        pc_to_fetch <= pc+4;
+                    end
+                end else begin
+                    pc <= pc + 4;
+                    pc_to_fetch <= pc+4;
+                end
+end
+always @(posedge IF_success)begin
+    if(IF_success == `TRUE) begin//如果之前已经fetch成功了
+        pc_to_decoder <= pc;
+        icache_enable <= `FALSE;
+    end
+end
 
 always @(posedge clk) begin
     if (rst == `TRUE) begin
         icache_enable <= `FALSE;
         pc <= `NULL32;
+        begin_flag <= 0;
+        wait_flag <= `FALSE;
     end else if(rdy==`TRUE && stall_IF==`FALSE) begin
         if(jump_wrong==`TRUE) begin
             pc = jump_pc_from_rob;
         end else begin
-            if(IF_success == `TRUE) begin//如果之前已经fetch成功了
-                pc_to_decoder = pc;
-                if(is_jump_instr==`TRUE) begin
-                    if(jump_prediction==`TRUE)begin
-                        pc = jump_pc_from_predictor;
-                    end else begin
-                        pc = pc + 4;
-                    end
-                end else begin
-                    pc = pc + 4;
-                end
+            if(predictor_enable ==`TRUE && wait_flag == `TRUE) begin
+                icache_enable <= `TRUE;
+                wait_flag <= `FALSE;
+            end else if(begin_flag == 0) begin
+                begin_flag <= 1;
+                icache_enable <= `TRUE;
+                pc_to_fetch <= pc;
             end
         end
-        icache_enable = `TRUE;
-        pc_to_fetch = pc;//再去fetch下一个pc
     end
 end
 endmodule

@@ -49,11 +49,11 @@ reg [`ROBINDEX] rs1_rename[`RSSIZE];//如果rename成了ROBNOTRENAME就表示已
 reg [`ROBINDEX] rs2_rename[`RSSIZE];
 reg [`ROBINDEX] rd_rename[`RSSIZE];
 reg [`IMMLEN] imm[`RSSIZE];
-reg ready[`RSSIZE];
+wire ready[`RSSIZE];
 reg busy[`RSSIZE];
 reg [`ADDR] pc[`RSSIZE];
 wire [`RSINDEX] free_index;//表示的是哪一个RS是空的可以用的
-reg [`RSINDEX] ready_index; //表达hi说的是哪一个RS已经ready了可以进行计算了
+reg [`RSINDEX] ready_index; //表达说的是哪一个RS已经ready了可以进行计算了
 wire stall_IF;
 wire [`RSINDEX] issue_index;
 
@@ -74,26 +74,33 @@ assign free_index                     = ~busy[0] ? 0:
                                                                         ~busy[13] ? 13 :
                                                                             ~busy[14] ? 14 : 
                                                                                 ~busy[15] ? 15 : `RSNOTFOUND;
-assign issue_index                    = ~ready[0] ? 0:  
-                        ~ready[1] ? 1 :
-                            ~ready[2] ? 2 : 
-                                ~ready[3] ? 3 :
-                                    ~ready[4] ? 4 :
-                                        ~ready[5] ? 5 : 
-                                            ~ready[6] ? 6 :
-                                                ~ready[7] ? 7 :
-                                                    ~ready[8] ? 8 : 
-                                                        ~ready[9] ? 9 :
-                                                            ~ready[10] ? 10 :
-                                                                ~ready[11] ? 11 :
-                                                                    ~ready[12] ? 12 :
-                                                                        ~ready[13] ? 13 :
-                                                                            ~ready[14] ? 14 : 
-                                                                                ~ready[15] ? 15 : `RSNOTFOUND;
+assign issue_index                    = ready[0] ? 0:  
+                        ready[1] ? 1 :
+                            ready[2] ? 2 : 
+                                ready[3] ? 3 :
+                                    ready[4] ? 4 :
+                                        ready[5] ? 5 : 
+                                            ready[6] ? 6 :
+                                                ready[7] ? 7 :
+                                                    ready[8] ? 8 : 
+                                                        ready[9] ? 9 :
+                                                            ready[10] ? 10 :
+                                                                ready[11] ? 11 :
+                                                                    ready[12] ? 12 :
+                                                                        ready[13] ? 13 :
+                                                                            ready[14] ? 14 : 
+                                                                                ready[15] ? 15 : `RSNOTFOUND;
+genvar j;
+generate
+    for(j=0;j<16;j=j+1) begin
+        assign ready[j] = ((busy[j]==`TRUE) && (rs1_rename[j]==`ROBNOTRENAME) && (rs2_rename[j]==`ROBNOTRENAME)); 
+    end
+endgenerate
 initial begin
     rs_full <= `FALSE;
 end
 integer i;
+integer decoder_place_into_rs;
 always @(posedge clk) begin
     if(rst==`TRUE || jump_wrong==`TRUE) begin
         alu_enable                    <=  `FALSE;
@@ -101,7 +108,8 @@ always @(posedge clk) begin
             busy[i]                   <= `FALSE;
             opcode[i]                 <= 6'b000000;
         end
-    end else if (rdy) begin
+        decoder_place_into_rs <= 0;
+    end else if (rdy == `TRUE) begin
         // 如果在RS中又ready的index；
         // 发布到alu中进行计算
         if(issue_index != `RSNOTFOUND) begin
@@ -113,6 +121,8 @@ always @(posedge clk) begin
             to_alu_rd_renaming        <= rd_rename[issue_index[3:0]];
             to_alu_pc                 <= pc[issue_index[3:0]];
             busy[issue_index[3:0]]         <= `FALSE;//这条rs就可以使用了
+        end else begin
+            alu_enable                <= `FALSE;
         end
         //如果decode这边成功解码，并且有空位置，添加一条指令
         if(decode_success && free_index!=`RSNOTFOUND) begin
@@ -125,6 +135,7 @@ always @(posedge clk) begin
             rs2_value[free_index[3:0]]     <= decode_rs2_value;
             rs1_rename[free_index[3:0]]    <= decode_rs1_rename;
             rs2_rename[free_index[3:0]]    <= decode_rs2_rename;
+            decoder_place_into_rs <=  decoder_place_into_rs + 1;//表示的是decoder放到了rs里面
         end     
         //monitor alu lsb and rob
         if(alu_broadcast==`TRUE) begin
@@ -165,11 +176,6 @@ always @(posedge clk) begin
                         rs2_value[i]  <= rob_cbd_value;
                     end
                 end
-            end
-        end
-        for(i=0;i<16;i=i+1) begin
-            if(rs1_rename[i]==`ROBNOTRENAME && rs2_rename[i]==`ROBNOTRENAME) begin
-                ready[i]              <= `TRUE;
             end
         end
     end

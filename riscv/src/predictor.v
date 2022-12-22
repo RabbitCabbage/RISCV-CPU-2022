@@ -1,4 +1,5 @@
 `include "define.v"
+`timescale 1ns/1ns
 module Predictor(
     //control signals
     input wire clk,
@@ -13,40 +14,50 @@ module Predictor(
     output reg [`ADDR] predict_jump_pc,
     input wire real_jump_or_not,
     input wire [`PREDICTORINDEX]instr_pc,
-    input wire[`ADDR] jump_to_pc_from_rob
+    input wire[`ADDR] jump_to_pc_from_rob,
+    output reg predictor_stall_if,
+    input alu_broadcast,
+    input [`OPLEN]alu_broadcast_op,
+    input [`ADDR] alu_jumping_pc,
+    output reg predictor_enable_if
 );
-reg[`INSTRLEN] see_the_instr_now;
-reg [`IMMLEN] imm;
+
 always @(posedge clk) begin
     if(rst == `TRUE)begin
         is_jump_instr <= `FALSE;
         predicted_jump <= `FALSE;
-    end else if(rdy == `TRUE && if_success == `TRUE) begin
-        is_jump_instr = `FALSE;
-        predicted_jump = `FALSE;
-        predict_jump_pc = if_instr_pc_itself + 4;
-        case(if_instr_to_ask_for_prediction[`OPCODE])
-            7'd111: begin//jal
-                is_jump_instr <= `TRUE;
-                predicted_jump <= `TRUE;
-                see_the_instr_now = if_instr_to_ask_for_prediction;
-                imm = {{12{if_instr_to_ask_for_prediction[31]}},if_instr_to_ask_for_prediction[19:12],if_instr_to_ask_for_prediction[20],if_instr_to_ask_for_prediction[30:21],1'b0};
-                predict_jump_pc = if_instr_pc_itself + imm;
+        predictor_stall_if <= `FALSE;
+        predictor_enable_if <= `FALSE;
+    end else if(rdy == `TRUE) begin
+        if(if_success == `TRUE) begin
+            if (if_instr_to_ask_for_prediction[`OPCODE]==7'd111) begin//jal
+                    is_jump_instr <= `TRUE;
+                    predicted_jump <= `TRUE;
+                    predict_jump_pc <= if_instr_pc_itself + {{12{if_instr_to_ask_for_prediction[31]}},if_instr_to_ask_for_prediction[19:12],if_instr_to_ask_for_prediction[20],if_instr_to_ask_for_prediction[30:21],1'b0};
+            end else if(if_instr_to_ask_for_prediction[`OPCODE]== 7'd103) begin//jalr
+                    is_jump_instr <= `TRUE;
+                    predicted_jump <= `TRUE;
+                    predictor_stall_if <= `TRUE;
+            end else if(if_instr_to_ask_for_prediction[`OPCODE]== 7'd99) begin//branch
+                    is_jump_instr <= `TRUE;
+                    predicted_jump <= `TRUE;
+                    predict_jump_pc <= if_instr_pc_itself + {{20{if_instr_to_ask_for_prediction[31]}},if_instr_to_ask_for_prediction[7],if_instr_to_ask_for_prediction[30:25],if_instr_to_ask_for_prediction[11:8],1'b0};
+            end else begin
+                    is_jump_instr <= `FALSE;
+                    predicted_jump <= `FALSE;//todo
+                    predict_jump_pc <= if_instr_pc_itself+ 4;
             end
-            7'd103: begin//jalr
-                is_jump_instr <= `TRUE;
-                predicted_jump <= `FALSE;
-                predict_jump_pc <= if_instr_pc_itself+ 4;//todo 这里需要一个寄存器读取值计算怎么办，就stall？
-            end
-            7'd99: begin//branch
-                is_jump_instr <= `TRUE;
-                predicted_jump <= `TRUE;
-                imm = {{20{if_instr_to_ask_for_prediction[31]}},if_instr_to_ask_for_prediction[7],if_instr_to_ask_for_prediction[30:25],if_instr_to_ask_for_prediction[11:8],1'b0};
-                predict_jump_pc = if_instr_pc_itself+ imm;
-            end
-            default: begin
-            end
-        endcase
+            predictor_enable_if <= `TRUE;//predictor让if进行下一步了
+        end else begin
+            predictor_enable_if <= `FALSE;
+        end
+        if(alu_broadcast==`TRUE && alu_broadcast_op==`JALR) begin
+            is_jump_instr <= `TRUE;
+            predict_jump_pc <= alu_jumping_pc;
+            predicted_jump <= `TRUE;
+            predictor_stall_if <= `FALSE;
+            predictor_enable_if <= `TRUE;
+        end
     end
 end
 endmodule
