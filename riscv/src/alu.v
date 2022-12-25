@@ -19,10 +19,11 @@ module ALU(
     output reg alu_broadcast,
     output reg [`ROBINDEX] out_rd_rename,
     output reg [`ADDR] jumping_pc,
-    output reg [`OPLEN] alu_broadcast_op
+    output reg [`OPLEN] alu_broadcast_op,
+    input wire jump_wrong
 );
 always @(posedge clk) begin
-    if(rst==`TRUE)begin
+    if(rst==`TRUE || jump_wrong == `TRUE)begin
         alu_broadcast <= `FALSE;
     end else
     if(rdy==`TRUE && alu_enable==`TRUE) begin
@@ -54,32 +55,32 @@ always @(posedge clk) begin
             `BEQ: begin
                 result        <= (rs1_value==rs2_value)?1:0;
                 jumping_pc    <= instr_pc+imm;
-                alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
+                //alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
             end
             `BNE: begin
                 result        <= (rs1_value!=rs2_value)?1:0;
                 jumping_pc    <= instr_pc+imm;
-                alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
+                //alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
             end
             `BLT: begin
                 result        <= ($signed(rs1_value)<$signed(rs2_value))?1:0;
                 jumping_pc    <= instr_pc+imm;
-                alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
+                //alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
             end
             `BGE: begin
                 result        <= ($signed(rs1_value)>=$signed(rs2_value))?1:0;
                 jumping_pc    <= instr_pc+imm;
-                alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
+                //alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
             end
             `BLTU: begin
                 result        <= (rs1_value<rs2_value)?1:0;
                 jumping_pc    <= instr_pc+imm;
-                alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
+                //alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
             end
             `BGEU: begin
                 result        <= (rs1_value>=rs2_value)?1:0;
                 jumping_pc    <= instr_pc+imm;
-                alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
+                //alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新，那你应该在rob的时候不让reg写，广播还是要做的
             end
             `JAL:  begin
                 result        <= instr_pc+4;

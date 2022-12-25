@@ -6,6 +6,7 @@ module ROB(
     input wire rst,
     //commit to lsb, let lsb commit and perform the instr
     output reg rob_enable_lsb_write,
+    output reg[`INSTRLEN] commit_store_instr,
     output reg [`DATALEN] to_lsb_value,
     output reg [`LSBINSTRLEN] to_lsb_size,
     output reg [`ADDR] to_lsb_addr,
@@ -38,9 +39,8 @@ module ROB(
 
 
     input wire [`ADDR] lsb_destination_mem_addr,//from lsb 如果lsb算出来了一个destination就会送过来
-    input wire lsb_input_enable,
+    input wire lsb_input_addr_enable,
     input wire [`ROBINDEX] from_lsb_rename,
-    input wire [`ADDR] from_lsb_pc,
 
     input wire alu_broadcast,
     input wire [`DATALEN] alu_cbd_value,
@@ -49,8 +49,9 @@ module ROB(
 
     input wire lsb_broadcast,
     input wire [`DATALEN] lsb_cbd_value,
-    input wire [`DATALEN] lsb_addr,
     input wire [`ROBINDEX] lsb_update_rename,
+    input wire lsb_store_instr_ready,
+    input wire [`ROBINDEX] lsb_ready_store_instr_rename,
 
     output reg rob_broadcast,
     output reg [`ROBINDEX] rob_update_rename,
@@ -62,7 +63,8 @@ module ROB(
 
     output reg to_predictor_enable,
     output reg to_predictor_jump,
-    output reg [`PREDICTORINDEX] to_predictor_pc
+    output reg [`PREDICTORINDEX] to_predictor_pc,
+    input wire ifetch_jump_change_success
 );
 reg [`ADDR] pc[`ROBSIZE];
 reg [`DATALEN] rd_value[`ROBSIZE];
@@ -77,7 +79,7 @@ reg is_store[`ROBSIZE];
 //rob的数据结构应该是一个循环队列，记下头尾,记住顺序
 reg [`ROBINDEX] head;
 reg [`ROBPOINTER] next;
-reg [`INSTRLEN] instr;
+reg [`INSTRLEN] instr[`ROBSIZE];
 
 //因为decoder送进来的是4：0的index，有一位用作了表示无重命名
 //所以这里要取后面的3位作为indexing的下标
@@ -91,8 +93,12 @@ integer i;
 integer debug_alu_update;
 integer debug_rob_commit;
 integer occupied;
-localparam  file_name = "../test_execute.txt";
-integer file_handle = 0;
+wire debug_head_ready;
+assign debug_head_ready = ready[head[3:0]];
+wire[`INSTRLEN] debug_instr;
+assign debug_instr = instr[head[3:0]];
+
+
 initial begin
     rob_full <= `FALSE;
     head <= 0;//定一个很特殊的初始状态
@@ -100,37 +106,55 @@ initial begin
     debug_alu_update <= 0;
     debug_rob_commit <= 0;
     occupied <= 0;
-end
-
-always @(posedge clk) begin
-    if(rst == `TRUE ||(rdy == `TRUE && jump_wrong == `TRUE)) begin
-        head <= 0;;
-        next <= 0;
-        to_reg_rd <= `NULL5;
+    to_reg_rd <= `NULL5;
         enable_reg <=  `FALSE;
         rob_enable_lsb_write <= `FALSE;
-        jump_wrong <= `FALSE;
         rob_broadcast <= `FALSE;
         rob_update_rename <= `NULL5;
         rob_cbd_value <= `NULL32;
         jump_wrong <= `FALSE;
         jumping_pc <= `NULL32;
-        for(i=0;i<`ROBSIZESCALAR;i=i+1) begin
+end
+//store 操作需要addr以及相关的数据，也就是rs2，所以一个store操作只要有了addr有了rs2就可以执行了
+always @(posedge clk) begin
+    if(rst == `TRUE ||(rdy == `TRUE && jump_wrong == `TRUE)) begin
+        head <= 0;
+        next <= 0;
+        occupied <= 0;
+         for(i=0;i<`ROBSIZESCALAR;i=i+1) begin
             rd_value[i] <= `NULL32;
             ready[i] <= `FALSE;
             is_store[i] <= `FALSE;
             predictor_jump[i] <= `FALSE;
         end
+        if (ifetch_jump_change_success == `TRUE) begin
+            jump_wrong <= `FALSE;
+        end
+        //jump wrong 的时候这些信息得记下来，因为指令还得执行，不能赋成null
+        // to_reg_rd <= `NULL5;
+        // enable_reg <=  `FALSE;
+        // rob_enable_lsb_write <= `FALSE;
+        // jump_wrong <= `FALSE;
+        // rob_broadcast <= `FALSE;
+        // rob_update_rename <= `NULL5;
+        // rob_cbd_value <= `NULL32;
+        // jump_wrong <= `FALSE;
+        //jumping_pc <= `NULL32;
     end else if(rdy == `TRUE && jump_wrong == `FALSE) begin
         //commit the first instr;
         rob_full = (next == head && occupied == 16);
-       if(ready[head[3:0]]==`TRUE && rob_full==`FALSE && head != `ROBNOTRENAME) begin//同时要检查这个rob不空
+       if(ready[head[3:0]]==`TRUE && rob_full==`FALSE && occupied != 0) begin//同时要检查这个rob不空
+            debug_rob_commit <= debug_rob_commit + 1;
+            if(debug_rob_commit == 200) begin 
+                $stop;
+            end
            case(op[head[3:0]])
                `SB: begin
                     to_lsb_size <= `REQUIRE8;
                     to_lsb_addr <= destination_mem_addr[head[3:0]];
                     to_lsb_value <= rd_value[head[3:0]];
                     rob_enable_lsb_write <= `TRUE;
+                    commit_store_instr <= instr[head[3:0]];
                     enable_reg <=  `FALSE;
                end
                `SH: begin
@@ -138,13 +162,16 @@ always @(posedge clk) begin
                     to_lsb_addr <= destination_mem_addr[head[3:0]];
                     to_lsb_value <= rd_value[head[3:0]];
                     rob_enable_lsb_write <= `TRUE;
+                    commit_store_instr <= instr[head[3:0]];
                     enable_reg <=  `FALSE;
                end
                `SW: begin
+                    // debug_rob_commit <= debug_rob_commit + 1;
                     to_lsb_size <= `REQUIRE32;
                     to_lsb_addr <= destination_mem_addr[head[3:0]];
                     to_lsb_value <= rd_value[head[3:0]];
                     rob_enable_lsb_write <= `TRUE;
+                    commit_store_instr <= instr[head[3:0]];
                     enable_reg <=  `FALSE;
                end
                `JALR: begin
@@ -161,7 +188,7 @@ always @(posedge clk) begin
                     to_predictor_enable <= `TRUE;
                     if(rd_value[head[3:0]][0] != predictor_jump[head[3:0]]) begin
                         if(rd_value[head[3:0]]=={31'b0,1'b1}) begin
-                            jump_wrong <= `TRUE;
+                            jump_wrong <= `FALSE;
                             jumping_pc <= jump_pc[head[3:0]];
                         end else begin
                             jump_wrong <= `TRUE;
@@ -179,22 +206,122 @@ always @(posedge clk) begin
                     enable_reg <=  `TRUE;
                end
            endcase
-           file_handle = $fopen(file_name,"w");
-           if(!file_handle) begin
-            $display("could not open file\r");
-            $stop;
-           end
-        //    case(op[head[3:0]])
-            // `LB: begin
-                $fdisplay(file_handle,"%h /tlb %d %d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                $fclose(file_handle);
-                $display("hello?");
+           case(op[head[3:0]])
+            `LB: begin
+                $display("%h\tlb\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `LH: begin
+                $display("%h\tlh\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `LW: begin
+                $display("%h\tlw\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `LBU: begin
+                $display("%h\tlbu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `LHU: begin
+                $display("%h\tlhu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            // `SB: begin
+            //     $display("%h\tsb\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
             // end
-            // default begin
+            // `SH: begin
+            //     $display("%h\tsh\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
             // end
-        //    endcase
+            // `SW: begin
+            //     $display("%h\tsw\t%d\t%d",instr[head[3:0]],destination_mem_addr[head[3:0]]);
+            // end
+            `LUI: begin
+                $display("%h\tlui\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `AUIPC: begin
+                $display("%h\tauipc\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `SUB: begin
+                $display("%h\tsub\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `ADD: begin
+                $display("%h\tadd\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `ADDI: begin
+                $display("%h\taddi\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `XOR: begin
+                $display("%h\txor\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `XORI: begin
+                $display("%h\txori\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `OR: begin
+                $display("%h\tor\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `ORI: begin
+                $display("%h\tori\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `AND: begin
+                $display("%h\tand\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `ANDI: begin
+                $display("%h\tandi\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `SLL: begin
+                $display("%h\tsll\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `SLLI: begin
+                $display("%h\tslli\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `SRL: begin
+                $display("%h\tsrl\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `SRLI: begin
+                $display("%h\tsrli\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `SRA: begin
+                $display("%h\tsra\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `SRAI: begin
+                $display("%h\tsrai\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `SLTI: begin
+                $display("%h\tslti\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `SLTIU: begin
+                $display("%h\tsltiu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `SLT: begin
+                $display("%h\tslt\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `SLTU: begin
+                $display("%h\tsltu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `BEQ: begin
+                $display("%h\tbeq\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `BNE: begin
+                $display("%h\tbne\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `BLT: begin
+                $display("%h\tblt\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `BGE: begin
+                $display("%h\tbge\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `BLTU: begin
+                $display("%h\tbltu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `BGEU: begin
+                $display("%h\tbgeu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end
+            `JAL: begin
+                $display("%h\tjal\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],destination_mem_addr[head[3:0]]);
+            end
+            `JALR: begin
+                $display("%h\tjalr\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+            end      
+            default begin
+            end
+           endcase
            head <= (head + 1) % `ROBNOTRENAME;
-           debug_rob_commit <= debug_rob_commit + 1;
            occupied <= occupied - 1;
        end else begin
         enable_reg <=  `FALSE;
@@ -215,9 +342,12 @@ always @(posedge clk) begin
            next <= next + 1;
            occupied <= occupied + 1;
         end
-        if(lsb_input_enable == `TRUE) begin
-            pc[from_lsb_rename[3:0]] <= from_lsb_pc;
+
+       if(lsb_input_addr_enable == `TRUE) begin//lsb input放进来的是lsb计算得到的store的地址
             destination_mem_addr[from_lsb_rename[3:0]] <= lsb_destination_mem_addr;
+        end
+        if(lsb_store_instr_ready == `TRUE) begin
+            ready[lsb_ready_store_instr_rename] <= `TRUE;
         end
        if(alu_broadcast == `TRUE) begin
            rd_value[alu_update_rename[3:0]] <= alu_cbd_value;
@@ -225,12 +355,9 @@ always @(posedge clk) begin
            jump_pc[alu_update_rename[3:0]] <= alu_jumping_pc;
            debug_alu_update <= debug_alu_update + 1;
        end 
-       if(lsb_broadcast == `TRUE) begin
+       if(lsb_broadcast == `TRUE) begin//lsb广播的是lsb load得到的数据
            rd_value[lsb_update_rename[3:0]] <= lsb_cbd_value;
            ready[lsb_update_rename[3:0]] <= `TRUE;
-           if(is_store[lsb_update_rename[3:0]]==`TRUE) begin
-               destination_mem_addr[lsb_update_rename[3:0]] <= lsb_addr;
-           end
        end
     end
 end

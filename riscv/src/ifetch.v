@@ -29,8 +29,9 @@ module IF(
     output reg [`ADDR] instr_pc_to_predictor,
     input wire is_jump_instr,
     input wire jump_prediction,
-    input wire [`ADDR] jump_pc_from_predictor
+    input wire [`ADDR] jump_pc_from_predictor,
     //表示的是上一个指令是否是跳转指令，以及predict是否跳转
+    output reg ifetch_jump_change_success
 );
 reg [`ADDR] pc;
 
@@ -46,9 +47,15 @@ always @(posedge predictor_enable) begin
 end
 integer begin_flag;
 reg wait_flag;
+always @(posedge jump_wrong) begin
+    pc <= jump_pc_from_rob;
+    pc_to_fetch <= jump_pc_from_rob;
+    ifetch_jump_change_success <= `TRUE;
+    icache_enable <= `TRUE;
+end
 always @(posedge predictor_enable) begin
-    wait_flag <= `TRUE;
-    if(is_jump_instr==`TRUE) begin
+    wait_flag <= `TRUE;//表示的是等predictor去算地址
+    if(is_jump_instr==`TRUE && jump_wrong == `FALSE) begin
                     if(jump_prediction==`TRUE)begin
                         pc <= jump_pc_from_predictor;
                         pc_to_fetch <= jump_pc_from_predictor;
@@ -62,7 +69,7 @@ always @(posedge predictor_enable) begin
                 end
 end
 always @(posedge IF_success)begin
-    if(IF_success == `TRUE) begin//如果之前已经fetch成功了
+    if(IF_success == `TRUE && jump_wrong == `FALSE) begin//如果之前已经fetch成功了
         pc_to_decoder <= pc;
         icache_enable <= `FALSE;
     end
@@ -74,10 +81,8 @@ always @(posedge clk) begin
         pc <= `NULL32;
         begin_flag <= 0;
         wait_flag <= `FALSE;
-    end else if(rdy==`TRUE && stall_IF==`FALSE) begin
-        if(jump_wrong==`TRUE) begin
-            pc = jump_pc_from_rob;
-        end else begin
+    end else if(rdy==`TRUE && stall_IF==`FALSE && jump_wrong == `FALSE)begin
+            ifetch_jump_change_success <= `FALSE;
             if(predictor_enable ==`TRUE && wait_flag == `TRUE) begin
                 icache_enable <= `TRUE;
                 wait_flag <= `FALSE;
@@ -88,5 +93,5 @@ always @(posedge clk) begin
             end
         end
     end
-end
+
 endmodule

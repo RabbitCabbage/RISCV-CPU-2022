@@ -17,7 +17,8 @@ module MemCtrl (
     input wire lsb_load_signed,//todo
     input wire [`DATALEN] lsb_write_data,
     output reg [`DATALEN] lsb_read_data,
-    output reg lsb_success,
+    output reg lsb_load_success,
+    output reg lsb_store_success,
 
     //from ICache
     // ICache read from memory
@@ -35,7 +36,7 @@ module MemCtrl (
     input wire [`BYTELEN] mem_byte_read,
     output reg read_write,
     output reg mem_enable
-);
+    );
 
 reg working;
 reg for_lsb_ic;//0 for lsb, 1 for icache;
@@ -52,7 +53,8 @@ always @(posedge clk) begin
         working <= `FALSE;
         mem_enable <= `FALSE;
         icache_success <= `FALSE;
-        lsb_success <= `FALSE;
+        lsb_load_success <= `FALSE;
+        lsb_store_success <= `FALSE;
         this_pc_finished <= `FALSE;
     end else if (rdy == `TRUE) begin
         // There is an instruction on operation so it cannot begin a new instruction.
@@ -61,7 +63,7 @@ always @(posedge clk) begin
         if(start_addr != tmp_check_start_addr) begin
             this_pc_finished = `FALSE;
         end
-        if(working) begin
+        if(working==`TRUE) begin
             // 如果是向IO进行读写就不应该再把地址加一加二操作了。
             if(start_addr[17:16]==2'b11) begin
                 if(icache_read_signal==`TRUE || lsb_read_signal==`TRUE) begin //I/O read
@@ -70,12 +72,12 @@ always @(posedge clk) begin
                     if(finished == requiring_len) begin
                         //requiring length has been read
                         if(for_lsb_ic == 0) begin 
-                            lsb_success              <= `TRUE;
+                            lsb_load_success              <= `TRUE;
                             lsb_read_data            <= ultimate_data;
                             icache_success           <= `FALSE;
                         end else begin
                             icache_success           <= `TRUE;
-                            lsb_success              <= `FALSE;
+                            lsb_load_success              <= `FALSE;
                             icache_read_instr        <= ultimate_data;
                         end
                         working                      <= `FALSE;
@@ -84,7 +86,7 @@ always @(posedge clk) begin
                         ultimate_data                <= `NULL32;
                         mem_byte_write               <= `NULL8;
                     end else begin
-                        lsb_success                  <= `FALSE;
+                        lsb_load_success                  <= `FALSE;
                         icache_success               <= `FALSE;
                         mem_byte_write               <= `NULL8;
                         case(finished)
@@ -114,13 +116,14 @@ always @(posedge clk) begin
                     read_write                       <= `WRITE;
                     if(finished == requiring_len - 3'b001) begin
                         icache_success               <= `FALSE;
-                        lsb_success                  <= `TRUE;
+                        lsb_store_success                  <= `TRUE;
                         working                      <= `FALSE;
                         //mem_addr                     <= start_addr;
                         mem_enable                   <= `FALSE;
                         mem_byte_write               <= `NULL8;
                         ultimate_data                <= `NULL32;
                     end else begin
+                        lsb_store_success            <= `FALSE;
                         case(finished)
                             3'b000: begin
                                 mem_byte_write       <= lsb_write_data[15:8];
@@ -152,14 +155,14 @@ always @(posedge clk) begin
                             end else begin
                                 ultimate_data[31:24] = mem_byte_read;
                             end
-                            lsb_success              <= `TRUE;
+                            lsb_load_success              <= `TRUE;
                             lsb_read_data            <= ultimate_data;
                             icache_success           <= `FALSE;
                         end else begin
                             ultimate_data[31:24] = mem_byte_read;
                             icache_read_instr        = ultimate_data;
                             icache_success           <= `TRUE;
-                            lsb_success              <= `FALSE;
+                            lsb_load_success              <= `FALSE;
                         end
                         working                      = `FALSE;
                         //mem_addr                     = start_addr;
@@ -168,7 +171,7 @@ always @(posedge clk) begin
                         mem_byte_write               = `NULL8;
                         this_pc_finished             <= `TRUE;
                     end else begin
-                        lsb_success                  = `FALSE;
+                        lsb_load_success                  = `FALSE;
                         icache_success               = `FALSE;
                         mem_byte_write               = `NULL8;
                         case(finished)
@@ -198,7 +201,7 @@ always @(posedge clk) begin
                 end else begin //write
                     if(finished == requiring_len - 3'b001) begin
                         icache_success               <= `FALSE;
-                        lsb_success                  <= `TRUE;
+                        lsb_store_success                  <= `TRUE;
                         working                      <= `FALSE;
                         //mem_addr                     <= start_addr
                         mem_enable                   <= `FALSE;
@@ -229,7 +232,7 @@ always @(posedge clk) begin
         end
         // Begin a new instruction.
         else begin
-            if(lsb_read_signal == `TRUE || lsb_write_signal == `TRUE) begin
+            if(lsb_read_signal == `TRUE || lsb_write_signal == `TRUE && lsb_load_success == `FALSE && lsb_store_success == `FALSE) begin
                 if(lsb_read_signal == `TRUE) begin
                     ultimate_data                    <= `NULL32;
                     working                          <= `TRUE;
@@ -242,7 +245,8 @@ always @(posedge clk) begin
                     requiring_len                    <= lsb_len;
                     finished                         <= 3'b000;
                     icache_success                   <= `FALSE;
-                    lsb_success                      <= `FALSE;
+                    lsb_load_success                      <= `FALSE;
+                    lsb_store_success                     <= `FALSE;
                 end else begin
                     ultimate_data                    <= `NULL32;
                     working                          <= `TRUE;
@@ -252,7 +256,8 @@ always @(posedge clk) begin
                     requiring_len                    <= lsb_len;
                     finished                         <= 3'b000;
                     icache_success                   <= `FALSE;
-                    lsb_success                      <= `FALSE;
+                    lsb_load_success                      <= `FALSE;
+                    lsb_store_success                     <= `FALSE;
                     mem_addr                         = start_addr;
                     mem_enable                       <= `TRUE;
                     mem_byte_write                   <= lsb_write_data[7:0];
@@ -271,11 +276,13 @@ always @(posedge clk) begin
                 requiring_len                        <= `REQUIRE32;
                 finished                             <= 3'b000;
                 icache_success                       <= `FALSE;
-                lsb_success                          <= `FALSE;
+                lsb_load_success                      <= `FALSE;
+                lsb_store_success                     <= `FALSE;
             end
             else begin
                 icache_success                       <= `FALSE;
-                lsb_success                          <= `FALSE;
+                lsb_load_success                      <= `FALSE;
+                lsb_store_success                     <= `FALSE;
                 read_write                           <= `NULL1;
                 mem_addr                             <= `NULL32;
                 mem_enable                           <= `FALSE;

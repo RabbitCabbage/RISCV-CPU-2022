@@ -10,6 +10,7 @@ module ICache (
     //IF module
     //IF requires, and ICache gives
     input wire if_enable,
+    input wire jump_wrong,
     input  wire [`ADDR] require_addr,
     output reg [`INSTRLEN] IF_instr,
     output reg fetch_success,
@@ -24,10 +25,12 @@ module ICache (
   reg [`INSTRLEN] icache[`ICSIZE];
   reg [`ICSIZE] valid;
   reg [`ICTAG] tag[`ICSIZE];
+  integer debug_hit;
   initial begin
     fetch_success <= `FALSE;
     mem_enable <=`FALSE;
     mem_addr <= `NULL32;
+    debug_hit <= 0;
   end
 integer i;
   always @(posedge clk) begin
@@ -38,11 +41,13 @@ integer i;
         valid[i]                                 <=`FALSE;
       end
     end else if(rdy==`TRUE && if_enable==`TRUE) begin
-          if (valid[require_addr[`ICINDEX]] && (tag[require_addr[`ICTAG]]==require_addr[`ICTAG])) begin
+          if (valid[require_addr[`ICINDEX]] && (tag[require_addr[`ICINDEX]]==require_addr[`ICTAG])) begin
                 IF_instr                         <= icache[require_addr[`ICINDEX]];
                 fetch_success                    <= `TRUE;
+                debug_hit <= 1;
           end else begin
               //否则就miss掉了，需要到memory中进行查找
+              debug_hit<= 0;
               if(mem_fetch_success == `TRUE) begin
                   valid[require_addr[`ICINDEX]]  <= `TRUE;
                   tag[require_addr[`ICINDEX]]    <= require_addr[`ICTAG];

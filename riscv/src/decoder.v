@@ -60,7 +60,10 @@ module Decoder(
     output wire [`ROBINDEX] rob_fetch_rs2_index,
     output wire [`OPLEN] to_rob_op,
     output reg [`REGINDEX] to_rob_destination_reg_index,
-    output reg instr_need_fill_rd
+    output reg instr_need_fill_rd,
+    output reg enable_rs,
+    output reg enable_lsb,
+    input wire jump_wrong
 );
 //todo 把freetag赋值的时间点明显不对
 
@@ -96,8 +99,10 @@ assign to_rs_op = op;
 assign to_lsb_op = op;
 always @(posedge clk) begin
     //rst has nothing on this module, because this module has nothing stored in itself.
-
-    if(rdy==`TRUE && IF_success==`TRUE) begin
+    if(rst == `TRUE || jump_wrong == `TRUE) begin
+        enable_lsb <= `FALSE;
+        enable_rs <= `FALSE;
+    end else if(rdy==`TRUE && IF_success==`TRUE) begin
         decode_success                       <= `TRUE;
         to_reg_rd_rename                      <= rob_free_tag;
         to_rob_rd_rename                      <= rob_free_tag;
@@ -126,6 +131,8 @@ always @(posedge clk) begin
                 //to_lsb_rs1_value             <= rs1_value;
                 to_rob_destination_reg_index <= instr[11:7];
                 instr_need_fill_rd             <= `TRUE;
+                enable_lsb                     <= `TRUE;
+                enable_rs                      <= `FALSE;
             end
             7'b0010011: begin
                 case(instr[`FUNC3])
@@ -158,6 +165,8 @@ always @(posedge clk) begin
                 to_rs_rd_rename              <= rob_free_tag;
                 to_rob_destination_reg_index <= instr[11:7];
                 instr_need_fill_rd             <= `TRUE;
+                enable_lsb                     <= `FALSE;
+                enable_rs                    <= `TRUE;
             end
             7'b0010111: begin
                 op                           <= `AUIPC;
@@ -171,6 +180,8 @@ always @(posedge clk) begin
                 instr_need_fill_rd             <= `TRUE;
                 to_reg_need_rs1              <= `FALSE;
                 to_reg_need_rs2              <= `FALSE;
+                enable_rs                    <= `TRUE;
+                enable_lsb                   <= `FALSE;
             end
             7'b0100011: begin
                 case(instr[`FUNC3])
@@ -190,6 +201,9 @@ always @(posedge clk) begin
                 //to_lsb_rs1_value             <= rs1_value;
                 //to_lsb_rs2_value             <= rs2_value;
                 instr_need_fill_rd             <= `FALSE;
+                enable_lsb                     <= `TRUE;
+                enable_rs                      <= `FALSE;
+                to_lsb_rd_rename               <= rob_free_tag;
             end
             7'b0110011: begin
                 case(instr[`FUNC3])
@@ -226,6 +240,8 @@ always @(posedge clk) begin
                 //to_rob_op                    <= op;
                 to_rob_destination_reg_index <= instr[11:7];
                 instr_need_fill_rd             <= `TRUE;
+                enable_rs                    <= `TRUE;
+                enable_lsb                   <= `FALSE;
             end
             7'b0110111: begin
                 op                           <= `LUI;
@@ -239,6 +255,8 @@ always @(posedge clk) begin
                 instr_need_fill_rd             <= `TRUE;
                 to_reg_need_rs1              <= `FALSE;
                 to_reg_need_rs2              <= `FALSE;
+                enable_rs                    <= `TRUE;
+                enable_lsb                   <= `FALSE;
             end
             7'b1100011: begin
                 case(instr[`FUNC3])
@@ -261,6 +279,9 @@ always @(posedge clk) begin
                 //to_rs_op                     <= op;
                 //to_rob_op                    <= op;
                 instr_need_fill_rd             <= `FALSE;
+                enable_rs                    <= `TRUE;
+                enable_lsb                   <= `FALSE;
+                to_rs_rd_rename              <= rob_free_tag;
             end
             7'b1100111: begin
                 op                           <= `JALR;
@@ -276,6 +297,8 @@ always @(posedge clk) begin
                 //to_rob_op                    <= op;
                 to_rob_destination_reg_index <= instr[11:7];
                 instr_need_fill_rd             <= `TRUE;
+                enable_rs                    <= `TRUE;
+                enable_lsb                   <= `FALSE;
             end
             7'b1101111: begin
                 op                           <= `JAL;
@@ -289,6 +312,8 @@ always @(posedge clk) begin
                 instr_need_fill_rd             <= `TRUE;
                 to_reg_need_rs1              <= `FALSE;
                 to_reg_need_rs2              <= `FALSE;
+                enable_rs                    <= `TRUE;
+                enable_lsb                   <= `FALSE;
             end
             default:begin end
          endcase

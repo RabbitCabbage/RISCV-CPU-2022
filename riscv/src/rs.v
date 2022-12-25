@@ -16,6 +16,7 @@ module RS(
     input wire [`ROBINDEX] decode_rd_rename,
     input wire [`OPLEN] decode_op,
     input wire [`ADDR] decode_pc,
+    input wire decoder_enable,
 
     //monitor the updated renaming from the cbd
     //input the number and renaming from alu
@@ -125,7 +126,7 @@ always @(posedge clk) begin
             alu_enable                <= `FALSE;
         end
         //如果decode这边成功解码，并且有空位置，添加一条指令
-        if(decode_success && free_index!=`RSNOTFOUND) begin
+        if(decode_success==`TRUE && free_index!=`RSNOTFOUND &&decoder_enable==`TRUE) begin
             busy[free_index[3:0]]          <= `TRUE;
             rd_rename[free_index[3:0]]     <= decode_rd_rename;
             opcode[free_index[3:0]]        <= decode_op;
