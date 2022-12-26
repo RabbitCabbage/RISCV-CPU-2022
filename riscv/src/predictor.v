@@ -32,6 +32,7 @@ always @(posedge clk) begin
     end else if(rdy == `TRUE) begin
         if(jump_wrong == `TRUE) begin
             predictor_enable_if <= `FALSE;//都跳错了，后面的东西都不算数了，你predictor就不能再让if按照你算出来的addr走了
+            predictor_stall_if <= `FALSE;
         end else begin
             if(if_success == `TRUE) begin
                 if (if_instr_to_ask_for_prediction[`OPCODE]==7'd111) begin//jal

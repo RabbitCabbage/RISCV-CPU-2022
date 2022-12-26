@@ -44,7 +44,7 @@ module Decoder(
     output reg [`REGINDEX] to_reg_rs1_index,
     output reg [`REGINDEX] to_reg_rs2_index,
     output reg [`ROBINDEX] to_reg_rd_rename,
-    output wire [`REGINDEX] to_reg_rd_index,
+    output reg [`REGINDEX] to_reg_rd_index,
     output reg to_reg_need_rs1,
     output reg to_reg_need_rs2,
     // from ROB, asking for the free index for the rd renaming
@@ -131,6 +131,7 @@ always @(posedge clk) begin
                 //to_lsb_rs1_value             <= rs1_value;
                 to_rob_destination_reg_index <= instr[11:7];
                 instr_need_fill_rd             <= `TRUE;
+                to_reg_rd_index                <= instr[11:7];
                 enable_lsb                     <= `TRUE;
                 enable_rs                      <= `FALSE;
             end
@@ -165,6 +166,7 @@ always @(posedge clk) begin
                 to_rs_rd_rename              <= rob_free_tag;
                 to_rob_destination_reg_index <= instr[11:7];
                 instr_need_fill_rd             <= `TRUE;
+                to_reg_rd_index                <= instr[11:7];
                 enable_lsb                     <= `FALSE;
                 enable_rs                    <= `TRUE;
             end
@@ -178,6 +180,7 @@ always @(posedge clk) begin
                 //to_rob_op                    <= op;
                 to_rob_destination_reg_index <= instr[11:7];
                 instr_need_fill_rd             <= `TRUE;
+                to_reg_rd_index                <= instr[11:7];
                 to_reg_need_rs1              <= `FALSE;
                 to_reg_need_rs2              <= `FALSE;
                 enable_rs                    <= `TRUE;
@@ -240,6 +243,7 @@ always @(posedge clk) begin
                 //to_rob_op                    <= op;
                 to_rob_destination_reg_index <= instr[11:7];
                 instr_need_fill_rd             <= `TRUE;
+                to_reg_rd_index                <= instr[11:7];
                 enable_rs                    <= `TRUE;
                 enable_lsb                   <= `FALSE;
             end
@@ -253,6 +257,7 @@ always @(posedge clk) begin
                 to_rs_rd_rename              <= rob_free_tag;
                 to_rob_destination_reg_index <= instr[11:7];
                 instr_need_fill_rd             <= `TRUE;
+                to_reg_rd_index                <= instr[11:7];
                 to_reg_need_rs1              <= `FALSE;
                 to_reg_need_rs2              <= `FALSE;
                 enable_rs                    <= `TRUE;
@@ -297,6 +302,7 @@ always @(posedge clk) begin
                 //to_rob_op                    <= op;
                 to_rob_destination_reg_index <= instr[11:7];
                 instr_need_fill_rd             <= `TRUE;
+                to_reg_rd_index                <= instr[11:7];
                 enable_rs                    <= `TRUE;
                 enable_lsb                   <= `FALSE;
             end
@@ -310,6 +316,7 @@ always @(posedge clk) begin
                 //to_rob_op                    <= op;
                 to_rob_destination_reg_index <= instr[11:7];
                 instr_need_fill_rd             <= `TRUE;
+                to_reg_rd_index                <= instr[11:7];
                 to_reg_need_rs1              <= `FALSE;
                 to_reg_need_rs2              <= `FALSE;
                 enable_rs                    <= `TRUE;
@@ -319,6 +326,7 @@ always @(posedge clk) begin
          endcase
     end else begin
         decode_success                       <= `FALSE;
+        instr_need_fill_rd                   <= `FALSE;
     end
 end
 endmodule

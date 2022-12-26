@@ -40,7 +40,9 @@ integer i;
       for(i=0;i<`ICSIZESCALAR;i=i+1) begin
         valid[i]                                 <=`FALSE;
       end
-    end else if(rdy==`TRUE && if_enable==`TRUE) begin
+    // end else if(jump_wrong == `TRUE) begin
+    //   fetch_success <= `FALSE;//这里只有不成功后面才不会有隐患，要不然拿到if说成功了if就会给predictor，就会传回jump_pc让if出错
+    end else if(rdy==`TRUE && if_enable==`TRUE && jump_wrong == `FALSE) begin
           if (valid[require_addr[`ICINDEX]] && (tag[require_addr[`ICINDEX]]==require_addr[`ICTAG])) begin
                 IF_instr                         <= icache[require_addr[`ICINDEX]];
                 fetch_success                    <= `TRUE;

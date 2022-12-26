@@ -94,9 +94,14 @@ integer debug_alu_update;
 integer debug_rob_commit;
 integer occupied;
 wire debug_head_ready;
+wire debug_9_ready;
+assign debug_9_ready = ready[9];
 assign debug_head_ready = ready[head[3:0]];
 wire[`INSTRLEN] debug_instr;
 assign debug_instr = instr[head[3:0]];
+reg alu_need_update;
+reg lsb_need_update;
+reg lsb_need_addr_input;
 
 
 initial begin
@@ -114,6 +119,9 @@ initial begin
         rob_cbd_value <= `NULL32;
         jump_wrong <= `FALSE;
         jumping_pc <= `NULL32;
+    alu_need_update <= `FALSE;
+    lsb_need_update <= `FALSE;
+    lsb_need_addr_input <= `FALSE;
 end
 //store 操作需要addr以及相关的数据，也就是rs2，所以一个store操作只要有了addr有了rs2就可以执行了
 always @(posedge clk) begin
@@ -121,6 +129,7 @@ always @(posedge clk) begin
         head <= 0;
         next <= 0;
         occupied <= 0;
+        rob_broadcast <= `FALSE;
          for(i=0;i<`ROBSIZESCALAR;i=i+1) begin
             rd_value[i] <= `NULL32;
             ready[i] <= `FALSE;
@@ -145,7 +154,7 @@ always @(posedge clk) begin
         rob_full = (next == head && occupied == 16);
        if(ready[head[3:0]]==`TRUE && rob_full==`FALSE && occupied != 0) begin//同时要检查这个rob不空
             debug_rob_commit <= debug_rob_commit + 1;
-            if(debug_rob_commit == 200) begin 
+            if(debug_rob_commit == 550) begin 
                 $stop;
             end
            case(op[head[3:0]])
@@ -179,8 +188,11 @@ always @(posedge clk) begin
                     to_reg_value <= rd_value[head[3:0]];
                     to_reg_rename <= {1'b0,head[3:0]};
                     jumping_pc <= jump_pc[head[3:0]];
-                    jump_wrong <= `TRUE;
-                    enable_reg <=  `FALSE;
+                    //jump_wrong <= `TRUE;
+                    enable_reg <=  `TRUE;
+                    rob_broadcast <= `TRUE;
+                    rob_cbd_value <= rd_value[head[3:0]];
+                    rob_update_rename <= {1'b0,head[3:0]};
                end
                `BEQ,`BNE,`BLT,`BGE,`BLTU,`BGEU:begin
                     to_predictor_pc <= pc[head[3:0]][`PREDICTORHASH];
@@ -195,7 +207,7 @@ always @(posedge clk) begin
                             jumping_pc <= pc[head[3:0]]+4;
                         end
                     end
-                    enable_reg <=  `FALSE;                    
+                    enable_reg <=  `FALSE;       
                end
                default: begin
                     to_reg_rd <= destination_reg_index[head[3:0]];
@@ -204,6 +216,9 @@ always @(posedge clk) begin
                     jumping_pc <= jump_pc[head[3:0]];
                     jump_wrong <= `FALSE;
                     enable_reg <=  `TRUE;
+                    rob_broadcast <= `TRUE;
+                    rob_cbd_value <= rd_value[head[3:0]];
+                    rob_update_rename <= {1'b0,head[3:0]};
                end
            endcase
            case(op[head[3:0]])
@@ -295,39 +310,63 @@ always @(posedge clk) begin
                 $display("%h\tsltu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
             end
             `BEQ: begin
-                $display("%h\tbeq\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                $display("%h\tbeq ",instr[head[3:0]]);
             end
             `BNE: begin
-                $display("%h\tbne\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                $display("%h\tbne ",instr[head[3:0]]);
             end
             `BLT: begin
-                $display("%h\tblt\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                $display("%h\tblt ",instr[head[3:0]]);
             end
             `BGE: begin
-                $display("%h\tbge\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                $display("%h\tbge ",instr[head[3:0]]);
             end
             `BLTU: begin
-                $display("%h\tbltu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                $display("%h\tbltu ",instr[head[3:0]]);
             end
             `BGEU: begin
-                $display("%h\tbgeu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                $display("%h\tbgeu ",instr[head[3:0]]);
             end
             `JAL: begin
-                $display("%h\tjal\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],destination_mem_addr[head[3:0]]);
+                $display("%h\tjal ",instr[head[3:0]]);
             end
             `JALR: begin
-                $display("%h\tjalr\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                $display("%h\tjalr ",instr[head[3:0]]);
             end      
             default begin
             end
            endcase
+           ready[head[3:0]] <= `FALSE;
            head <= (head + 1) % `ROBNOTRENAME;
            occupied <= occupied - 1;
        end else begin
         enable_reg <=  `FALSE;
         rob_enable_lsb_write <= `FALSE;
+        rob_broadcast <= `FALSE;
        end
-       if(decoder_input_enable == `TRUE) begin
+       
+        if(lsb_input_addr_enable == `TRUE) begin//lsb input放进来的是lsb计算得到的store的地址
+            destination_mem_addr[from_lsb_rename[3:0]] <= lsb_destination_mem_addr;
+        end
+        if(lsb_store_instr_ready == `TRUE && lsb_need_addr_input == `TRUE) begin
+            ready[lsb_ready_store_instr_rename] <= `TRUE;
+            lsb_need_addr_input <= `FALSE;
+        end
+       if(alu_broadcast == `TRUE && alu_need_update==`TRUE) begin
+           rd_value[alu_update_rename[3:0]] <= alu_cbd_value;
+           ready[alu_update_rename[3:0]] <= `TRUE;
+           jump_pc[alu_update_rename[3:0]] <= alu_jumping_pc;
+           debug_alu_update <= debug_alu_update + 1;
+           alu_need_update <= `FALSE;
+       end 
+       if(lsb_broadcast == `TRUE&&lsb_need_update==`TRUE) begin//lsb广播的是lsb load得到的数据
+           rd_value[lsb_update_rename[3:0]] <= lsb_cbd_value;
+           ready[lsb_update_rename[3:0]] <= `TRUE;
+           lsb_need_update<=`FALSE;
+       end
+    end
+end
+always @(posedge decoder_input_enable) begin
            pc[next] <= decoder_pc;
            destination_reg_index[next] <= decoder_destination_reg_index;
            op[next] <= decoder_op;
@@ -342,23 +381,13 @@ always @(posedge clk) begin
            next <= next + 1;
            occupied <= occupied + 1;
         end
-
-       if(lsb_input_addr_enable == `TRUE) begin//lsb input放进来的是lsb计算得到的store的地址
-            destination_mem_addr[from_lsb_rename[3:0]] <= lsb_destination_mem_addr;
-        end
-        if(lsb_store_instr_ready == `TRUE) begin
-            ready[lsb_ready_store_instr_rename] <= `TRUE;
-        end
-       if(alu_broadcast == `TRUE) begin
-           rd_value[alu_update_rename[3:0]] <= alu_cbd_value;
-           ready[alu_update_rename[3:0]] <= `TRUE;
-           jump_pc[alu_update_rename[3:0]] <= alu_jumping_pc;
-           debug_alu_update <= debug_alu_update + 1;
-       end 
-       if(lsb_broadcast == `TRUE) begin//lsb广播的是lsb load得到的数据
-           rd_value[lsb_update_rename[3:0]] <= lsb_cbd_value;
-           ready[lsb_update_rename[3:0]] <= `TRUE;
-       end
-    end
+always @(posedge lsb_input_addr_enable) begin//lsb input放进来的是lsb计算得到的store的地址
+    lsb_need_addr_input <= `TRUE;
+end
+always @(posedge alu_broadcast) begin
+    alu_need_update <= `TRUE;  
+end 
+always @(posedge lsb_broadcast) begin//lsb广播的是lsb load得到的数据
+    lsb_need_update <= `TRUE;
 end
 endmodule

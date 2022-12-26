@@ -101,7 +101,8 @@ initial begin
     rs_full <= `FALSE;
 end
 integer i;
-integer decoder_place_into_rs;
+integer debug_alu_not_busy;
+reg alu_busy;
 always @(posedge clk) begin
     if(rst==`TRUE || jump_wrong==`TRUE) begin
         alu_enable                    <=  `FALSE;
@@ -109,11 +110,12 @@ always @(posedge clk) begin
             busy[i]                   <= `FALSE;
             opcode[i]                 <= 6'b000000;
         end
-        decoder_place_into_rs <= 0;
+        alu_busy <= `FALSE;
+        debug_alu_not_busy <= 0;
     end else if (rdy == `TRUE) begin
         // 如果在RS中又ready的index；
         // 发布到alu中进行计算
-        if(issue_index != `RSNOTFOUND) begin
+        if(issue_index != `RSNOTFOUND && alu_busy == `FALSE) begin
             alu_enable                <= `TRUE;
             to_alu_op                 <= opcode[issue_index[3:0]];
             to_alu_rs1_value          <= rs1_value[issue_index[3:0]];
@@ -122,8 +124,10 @@ always @(posedge clk) begin
             to_alu_rd_renaming        <= rd_rename[issue_index[3:0]];
             to_alu_pc                 <= pc[issue_index[3:0]];
             busy[issue_index[3:0]]         <= `FALSE;//这条rs就可以使用了
+            alu_busy <= `TRUE;
         end else begin
             alu_enable                <= `FALSE;
+            alu_busy                  <= `FALSE;
         end
         //如果decode这边成功解码，并且有空位置，添加一条指令
         if(decode_success==`TRUE && free_index!=`RSNOTFOUND &&decoder_enable==`TRUE) begin
@@ -136,23 +140,9 @@ always @(posedge clk) begin
             rs2_value[free_index[3:0]]     <= decode_rs2_value;
             rs1_rename[free_index[3:0]]    <= decode_rs1_rename;
             rs2_rename[free_index[3:0]]    <= decode_rs2_rename;
-            decoder_place_into_rs <=  decoder_place_into_rs + 1;//表示的是decoder放到了rs里面
         end     
         //monitor alu lsb and rob
-        if(alu_broadcast==`TRUE) begin
-            for(i=0;i<16;i=i+1) begin
-                if(busy[i]==`TRUE) begin
-                    if(rs1_rename[i]==alu_update_rename) begin
-                        //说明这个要被替换掉了
-                        rs1_rename[i] <= `ROBNOTRENAME;
-                        rs1_value[i]  <= alu_cbd_value;
-                    end else if(rs2_rename[i]==alu_update_rename) begin
-                        rs2_rename[i] <= `ROBNOTRENAME;
-                        rs2_value[i]  <= alu_cbd_value;
-                    end
-                end
-            end
-        end
+        
         if(lsb_broadcast==`TRUE) begin
             for(i=0;i<16;i=i+1) begin
                 if(busy[i]==`TRUE) begin
@@ -181,4 +171,20 @@ always @(posedge clk) begin
         end
     end
 end
+always @(posedge alu_broadcast) begin
+            alu_busy <= `FALSE;
+            debug_alu_not_busy <= debug_alu_not_busy + 1;
+            for(i=0;i<16;i=i+1) begin
+                if(busy[i]==`TRUE) begin
+                    if(rs1_rename[i]==alu_update_rename) begin
+                        //说明这个要被替换掉了
+                        rs1_rename[i] <= `ROBNOTRENAME;
+                        rs1_value[i]  <= alu_cbd_value;
+                    end else if(rs2_rename[i]==alu_update_rename) begin
+                        rs2_rename[i] <= `ROBNOTRENAME;
+                        rs2_value[i]  <= alu_cbd_value;
+                    end
+                end
+            end
+        end
 endmodule

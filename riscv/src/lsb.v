@@ -211,6 +211,9 @@ always @(posedge clk) begin
             addr_ready[head[3:0]] <= `FALSE;
             occupied <= occupied - 1;
             head <= (head + 1) % `ROBNOTRENAME;
+            lsb_read_signal <= `FALSE;
+        end else begin
+            lsb_broadcast <= `FALSE;
         end
         if(mem_store_success == `TRUE) begin
             lsb_write_signal <= `FALSE;

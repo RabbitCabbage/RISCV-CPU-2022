@@ -340,6 +340,8 @@ RegFile regfile_
       .clk                    (clk_in),
       .rst                    (rst_in),
       .rdy                    (rdy_in),
+      .decoder_success        (decoder_success_out),
+      .jump_wrong             (jump_wrong),
       .from_decoder_rs1_index (decoder_rs1_index_to_reg),
       .from_decoder_rs2_index (decoder_rs2_index_to_reg),
       .from_decoder_rd_index  (decoder_rd_index_to_reg),

@@ -42,9 +42,6 @@ always @(posedge IF_success) begin
     instr_pc_to_predictor <= pc;
 end
 
-always @(posedge predictor_enable) begin
-    
-end
 integer begin_flag;
 reg wait_flag;
 always @(posedge jump_wrong) begin
@@ -54,19 +51,21 @@ always @(posedge jump_wrong) begin
     icache_enable <= `TRUE;
 end
 always @(posedge predictor_enable) begin
-    wait_flag <= `TRUE;//表示的是等predictor去算地址
-    if(is_jump_instr==`TRUE && jump_wrong == `FALSE) begin
-                    if(jump_prediction==`TRUE)begin
-                        pc <= jump_pc_from_predictor;
-                        pc_to_fetch <= jump_pc_from_predictor;
-                    end else begin
-                        pc <= pc + 4;
-                        pc_to_fetch <= pc+4;
-                    end
-                end else begin
-                    pc <= pc + 4;
-                    pc_to_fetch <= pc+4;
-                end
+    //if(stall_IF==`FALSE)begin
+        wait_flag <= `TRUE;//目的是为了让predictor算出来的地址只被计算一次，不会重复计算
+        if(is_jump_instr==`TRUE && jump_wrong == `FALSE) begin
+        if(jump_prediction==`TRUE)begin
+            pc <= jump_pc_from_predictor;
+            pc_to_fetch <= jump_pc_from_predictor;
+        end else begin
+            pc <= pc + 4;
+            pc_to_fetch <= pc+4;
+        end
+        end else begin
+            pc <= pc + 4;
+            pc_to_fetch <= pc+4;
+        end
+    //end
 end
 always @(posedge IF_success)begin
     if(IF_success == `TRUE && jump_wrong == `FALSE) begin//如果之前已经fetch成功了
@@ -85,7 +84,7 @@ always @(posedge clk) begin
             ifetch_jump_change_success <= `FALSE;
             if(predictor_enable ==`TRUE && wait_flag == `TRUE) begin
                 icache_enable <= `TRUE;
-                wait_flag <= `FALSE;
+                wait_flag <= `FALSE;//这之后就不会再计算一次了
             end else if(begin_flag == 0) begin
                 begin_flag <= 1;
                 icache_enable <= `TRUE;
