@@ -48,11 +48,10 @@ reg [2:0] finished;//result processed,00,01,10,11
 reg  new_addr_assigned_to_start_addr;
 reg [`ADDR] tmp_check_new_addr;
 reg [`BYTELEN]debug_byte_read;
-integer debug_change_work;
+integer debug_enable_mem;
 always @(posedge clk) begin
     if(rst == `TRUE || jump_wrong==`TRUE) begin
         working <= `FALSE;
-        debug_change_work <=0;
         mem_enable <= `FALSE;
         icache_success <= `FALSE;
         lsb_load_success <= `FALSE;
@@ -84,7 +83,6 @@ always @(posedge clk) begin
                             icache_read_instr        <= ultimate_data;
                         end
                         working                      <= `FALSE;
-                        debug_change_work <= 1;
                         //mem_addr                     <= start_addr;
                         mem_enable                   <= `FALSE;
                         ultimate_data                <= `NULL32;
@@ -122,7 +120,6 @@ always @(posedge clk) begin
                         icache_success               <= `FALSE;
                         lsb_store_success                  <= `TRUE;
                         working                      <= `FALSE;
-                        debug_change_work <= 2;
                         //mem_addr                     <= start_addr;
                         mem_enable                   <= `FALSE;
                         mem_byte_write               <= `NULL8;
@@ -176,7 +173,6 @@ always @(posedge clk) begin
                             lsb_load_success              <= `FALSE;
                         end
                         working                      <= `FALSE;
-                        debug_change_work <= 3;
                         //mem_addr                     = start_addr;
                         mem_enable                   <= `FALSE;
                         //ultimate_data                = `NULL32;
@@ -214,7 +210,6 @@ always @(posedge clk) begin
                         icache_success               <= `FALSE;
                         lsb_store_success                  <= `TRUE;
                         working                      <= `FALSE;
-                        debug_change_work <= 4;
                         //mem_addr                     <= start_addr
                         mem_enable                   <= `FALSE;
                         mem_byte_write               <= `NULL8;
@@ -244,7 +239,7 @@ always @(posedge clk) begin
         end
         // Begin a new instruction.
         else begin
-            if(lsb_read_signal == `TRUE || lsb_write_signal == `TRUE && lsb_load_success == `FALSE && lsb_store_success == `FALSE&&  new_addr_assigned_to_start_addr == `FALSE) begin
+            if((lsb_read_signal == `TRUE || lsb_write_signal == `TRUE) && lsb_load_success == `FALSE && lsb_store_success == `FALSE &&  new_addr_assigned_to_start_addr == `FALSE) begin
                 if(lsb_read_signal == `TRUE) begin
                     ultimate_data                    <= `NULL32;
                     working                          <= `TRUE;
