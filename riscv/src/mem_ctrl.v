@@ -14,7 +14,6 @@ module MemCtrl (
     input wire lsb_read_signal,
     input wire [`ADDR] lsb_addr,
     input wire [`LSBINSTRLEN] lsb_len,//表示的是这个ls指令涉及了多少位，32、16、8分别对应3、2、1
-    input wire lsb_load_signed,//todo
     input wire [`DATALEN] lsb_write_data,
     output reg [`DATALEN] lsb_read_data,
     output reg lsb_load_success,
@@ -152,11 +151,15 @@ always @(posedge clk) begin
                         if(for_lsb_ic == 0) begin 
                             if(requiring_len == `REQUIRE8)begin
                                 ultimate_data[7:0] <= mem_byte_read;
-                                lsb_read_data[7:0]            <= mem_byte_read;
+                                lsb_read_data[7:0] <= mem_byte_read;
+                                lsb_read_data[31:8] <= 24'b0;
+                                ultimate_data[31:8] <= 24'b0;
                             end else if(requiring_len == `REQUIRE16) begin
                                 ultimate_data[15:8] <= mem_byte_read;
                                 lsb_read_data[7:0]            <= ultimate_data[7:0];
                                 lsb_read_data[15:8]            <= mem_byte_read;
+                                lsb_read_data[31:16] <= 16'b0;
+                                ultimate_data[31:16] <= 16'b0;
                             end else begin
                                 ultimate_data[31:24] <= mem_byte_read;
                                 lsb_read_data[23:0]            <= ultimate_data[23:0];
@@ -212,7 +215,7 @@ always @(posedge clk) begin
                         working                      <= `FALSE;
                         //mem_addr                     <= start_addr
                         mem_enable                   <= `FALSE;
-                        mem_byte_write               <= `NULL8;
+                        //mem_byte_write               <= `NULL8;
                     end else begin
                         case(finished)
                             3'b000: begin

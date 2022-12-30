@@ -1,0 +1,1036 @@
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            1280
+00169693        slli    13             128
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            2560
+00169693        slli    13             256
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            5120
+00169693        slli    13             512
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           10240
+00169693        slli    13            1024
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           20480
+00169693        slli    13            2048
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           40960
+00169693        slli    13            4096
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           81920
+00169693        slli    13            8192
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12          163840
+00169693        slli    13           16384
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12          327680
+00169693        slli    13           32768
+feb66ae3        bltu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13           16384
+00165613        srli    12          163840
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11          159558
+00d56533        or      10           16384
+0016d693        srli    13            8192
+00165613        srli    12           81920
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11           77638
+00d56533        or      10           24576
+0016d693        srli    13            4096
+00165613        srli    12           40960
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11           36678
+00d56533        or      10           28672
+0016d693        srli    13            2048
+00165613        srli    12           20480
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11           16198
+00d56533        or      10           30720
+0016d693        srli    13            1024
+00165613        srli    12           10240
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11            5958
+00d56533        or      10           31744
+0016d693        srli    13             512
+00165613        srli    12            5120
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11             838
+00d56533        or      10           32256
+0016d693        srli    13             256
+00165613        srli    12            2560
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13             128
+00165613        srli    12            1280
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13              64
+00165613        srli    12             640
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11             198
+00d56533        or      10           32320
+0016d693        srli    13              32
+00165613        srli    12             320
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13              16
+00165613        srli    12             160
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              38
+00d56533        or      10           32336
+0016d693        srli    13               8
+00165613        srli    12              80
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               4
+00165613        srli    12              40
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               2
+00165613        srli    12              20
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              18
+00d56533        or      10           32338
+0016d693        srli    13               1
+00165613        srli    12              10
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11               8
+00d56533        or      10           32339
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00058513        addi    10               8
+00028067        jalr
+00040a93        addi    21               3
+00140413        addi     8               4
+03050793        addi    15              56
+00890733        add     14          131000
+00048513        addi    10          323398
+00a00593        addi    11              10
+fef70fa3        sb          130999
+00048993        addi    19          323398
+064000ef        jal
+06054063        blt
+0605c663        blt
+00058613        addi    12              10
+00050593        addi    11          323398
+fff00513        addi    10      4294967295
+02060c63        beq
+00100693        addi    13               1
+00b67a63        bgeu
+00c05863        bge
+00161613        slli    12              20
+00169693        slli    13               2
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              40
+00169693        slli    13               4
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              80
+00169693        slli    13               8
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             160
+00169693        slli    13              16
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             320
+00169693        slli    13              32
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             640
+00169693        slli    13              64
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            1280
+00169693        slli    13             128
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            2560
+00169693        slli    13             256
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            5120
+00169693        slli    13             512
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           10240
+00169693        slli    13            1024
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           20480
+00169693        slli    13            2048
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           40960
+00169693        slli    13            4096
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           81920
+00169693        slli    13            8192
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12          163840
+00169693        slli    13           16384
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12          327680
+00169693        slli    13           32768
+feb66ae3        bltu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13           16384
+00165613        srli    12          163840
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11          159558
+00d56533        or      10           16384
+0016d693        srli    13            8192
+00165613        srli    12           81920
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11           77638
+00d56533        or      10           24576
+0016d693        srli    13            4096
+00165613        srli    12           40960
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11           36678
+00d56533        or      10           28672
+0016d693        srli    13            2048
+00165613        srli    12           20480
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11           16198
+00d56533        or      10           30720
+0016d693        srli    13            1024
+00165613        srli    12           10240
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11            5958
+00d56533        or      10           31744
+0016d693        srli    13             512
+00165613        srli    12            5120
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11             838
+00d56533        or      10           32256
+0016d693        srli    13             256
+00165613        srli    12            2560
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13             128
+00165613        srli    12            1280
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13              64
+00165613        srli    12             640
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11             198
+00d56533        or      10           32320
+0016d693        srli    13              32
+00165613        srli    12             320
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13              16
+00165613        srli    12             160
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              38
+00d56533        or      10           32336
+0016d693        srli    13               8
+00165613        srli    12              80
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               4
+00165613        srli    12              40
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               2
+00165613        srli    12              20
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              18
+00d56533        or      10           32338
+0016d693        srli    13               1
+00165613        srli    12              10
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11               8
+00d56533        or      10           32339
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00050493        addi     9           32339
+fd3a46e3        blt
+00a00593        addi    11              10
+00048513        addi    10           32339
+10c000ef        jal
+00008293        addi     5            4176
+0005ca63        blt
+00054c63        blt
+f79ff0ef        jal
+00058613        addi    12              10
+00050593        addi    11           32339
+fff00513        addi    10      4294967295
+02060c63        beq
+00100693        addi    13               1
+00b67a63        bgeu
+00c05863        bge
+00161613        slli    12              20
+00169693        slli    13               2
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              40
+00169693        slli    13               4
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              80
+00169693        slli    13               8
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             160
+00169693        slli    13              16
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             320
+00169693        slli    13              32
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             640
+00169693        slli    13              64
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            1280
+00169693        slli    13             128
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            2560
+00169693        slli    13             256
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            5120
+00169693        slli    13             512
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           10240
+00169693        slli    13            1024
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           20480
+00169693        slli    13            2048
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           40960
+00169693        slli    13            4096
+feb66ae3        bltu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13            2048
+00165613        srli    12           20480
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11           11859
+00d56533        or      10            2048
+0016d693        srli    13            1024
+00165613        srli    12           10240
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11            1619
+00d56533        or      10            3072
+0016d693        srli    13             512
+00165613        srli    12            5120
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13             256
+00165613        srli    12            2560
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13             128
+00165613        srli    12            1280
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11             339
+00d56533        or      10            3200
+0016d693        srli    13              64
+00165613        srli    12             640
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13              32
+00165613        srli    12             320
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              19
+00d56533        or      10            3232
+0016d693        srli    13              16
+00165613        srli    12             160
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               8
+00165613        srli    12              80
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               4
+00165613        srli    12              40
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               2
+00165613        srli    12              20
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               1
+00165613        srli    12              10
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11               9
+00d56533        or      10            3233
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00058513        addi    10               9
+00028067        jalr
+00040a93        addi    21               4
+00140413        addi     8               5
+03050793        addi    15              57
+00890733        add     14          131001
+00048513        addi    10           32339
+00a00593        addi    11              10
+fef70fa3        sb          131000
+00048993        addi    19           32339
+064000ef        jal
+06054063        blt
+0605c663        blt
+00058613        addi    12              10
+00050593        addi    11           32339
+fff00513        addi    10      4294967295
+02060c63        beq
+00100693        addi    13               1
+00b67a63        bgeu
+00c05863        bge
+00161613        slli    12              20
+00169693        slli    13               2
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              40
+00169693        slli    13               4
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              80
+00169693        slli    13               8
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             160
+00169693        slli    13              16
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             320
+00169693        slli    13              32
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             640
+00169693        slli    13              64
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            1280
+00169693        slli    13             128
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            2560
+00169693        slli    13             256
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            5120
+00169693        slli    13             512
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           10240
+00169693        slli    13            1024
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           20480
+00169693        slli    13            2048
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12           40960
+00169693        slli    13            4096
+feb66ae3        bltu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13            2048
+00165613        srli    12           20480
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11           11859
+00d56533        or      10            2048
+0016d693        srli    13            1024
+00165613        srli    12           10240
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11            1619
+00d56533        or      10            3072
+0016d693        srli    13             512
+00165613        srli    12            5120
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13             256
+00165613        srli    12            2560
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13             128
+00165613        srli    12            1280
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11             339
+00d56533        or      10            3200
+0016d693        srli    13              64
+00165613        srli    12             640
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13              32
+00165613        srli    12             320
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              19
+00d56533        or      10            3232
+0016d693        srli    13              16
+00165613        srli    12             160
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               8
+00165613        srli    12              80
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               4
+00165613        srli    12              40
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               2
+00165613        srli    12              20
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               1
+00165613        srli    12              10
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11               9
+00d56533        or      10            3233
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00050493        addi     9            3233
+fd3a46e3        blt
+00a00593        addi    11              10
+00048513        addi    10            3233
+10c000ef        jal
+00008293        addi     5            4176
+0005ca63        blt
+00054c63        blt
+f79ff0ef        jal
+00058613        addi    12              10
+00050593        addi    11            3233
+fff00513        addi    10      4294967295
+02060c63        beq
+00100693        addi    13               1
+00b67a63        bgeu
+00c05863        bge
+00161613        slli    12              20
+00169693        slli    13               2
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              40
+00169693        slli    13               4
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              80
+00169693        slli    13               8
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             160
+00169693        slli    13              16
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             320
+00169693        slli    13              32
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             640
+00169693        slli    13              64
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            1280
+00169693        slli    13             128
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            2560
+00169693        slli    13             256
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            5120
+00169693        slli    13             512
+feb66ae3        bltu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13             256
+00165613        srli    12            2560
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11             673
+00d56533        or      10             256
+0016d693        srli    13             128
+00165613        srli    12            1280
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13              64
+00165613        srli    12             640
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              33
+00d56533        or      10             320
+0016d693        srli    13              32
+00165613        srli    12             320
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13              16
+00165613        srli    12             160
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               8
+00165613        srli    12              80
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               4
+00165613        srli    12              40
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               2
+00165613        srli    12              20
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              13
+00d56533        or      10             322
+0016d693        srli    13               1
+00165613        srli    12              10
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11               3
+00d56533        or      10             323
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00058513        addi    10               3
+00028067        jalr
+00040a93        addi    21               5
+00140413        addi     8               6
+03050793        addi    15              51
+00890733        add     14          131002
+00048513        addi    10            3233
+00a00593        addi    11              10
+fef70fa3        sb          131001
+00048993        addi    19            3233
+064000ef        jal
+06054063        blt
+0605c663        blt
+00058613        addi    12              10
+00050593        addi    11            3233
+fff00513        addi    10      4294967295
+02060c63        beq
+00100693        addi    13               1
+00b67a63        bgeu
+00c05863        bge
+00161613        slli    12              20
+00169693        slli    13               2
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              40
+00169693        slli    13               4
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              80
+00169693        slli    13               8
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             160
+00169693        slli    13              16
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             320
+00169693        slli    13              32
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             640
+00169693        slli    13              64
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            1280
+00169693        slli    13             128
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            2560
+00169693        slli    13             256
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12            5120
+00169693        slli    13             512
+feb66ae3        bltu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13             256
+00165613        srli    12            2560
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11             673
+00d56533        or      10             256
+0016d693        srli    13             128
+00165613        srli    12            1280
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13              64
+00165613        srli    12             640
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              33
+00d56533        or      10             320
+0016d693        srli    13              32
+00165613        srli    12             320
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13              16
+00165613        srli    12             160
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               8
+00165613        srli    12              80
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               4
+00165613        srli    12              40
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               2
+00165613        srli    12              20
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              13
+00d56533        or      10             322
+0016d693        srli    13               1
+00165613        srli    12              10
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11               3
+00d56533        or      10             323
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00050493        addi     9             323
+fd3a46e3        blt
+00a00593        addi    11              10
+00048513        addi    10             323
+10c000ef        jal
+00008293        addi     5            4176
+0005ca63        blt
+00054c63        blt
+f79ff0ef        jal
+00058613        addi    12              10
+00050593        addi    11             323
+fff00513        addi    10      4294967295
+02060c63        beq
+00100693        addi    13               1
+00b67a63        bgeu
+00c05863        bge
+00161613        slli    12              20
+00169693        slli    13               2
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              40
+00169693        slli    13               4
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              80
+00169693        slli    13               8
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             160
+00169693        slli    13              16
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             320
+00169693        slli    13              32
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             640
+00169693        slli    13              64
+feb66ae3        bltu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13              32
+00165613        srli    12             320
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11               3
+00d56533        or      10              32
+0016d693        srli    13              16
+00165613        srli    12             160
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               8
+00165613        srli    12              80
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               4
+00165613        srli    12              40
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               2
+00165613        srli    12              20
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               1
+00165613        srli    12              10
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00058513        addi    10               3
+00028067        jalr
+00040a93        addi    21               6
+00140413        addi     8               7
+03050793        addi    15              51
+00890733        add     14          131003
+00048513        addi    10             323
+00a00593        addi    11              10
+fef70fa3        sb          131002
+00048993        addi    19             323
+064000ef        jal
+06054063        blt
+0605c663        blt
+00058613        addi    12              10
+00050593        addi    11             323
+fff00513        addi    10      4294967295
+02060c63        beq
+00100693        addi    13               1
+00b67a63        bgeu
+00c05863        bge
+00161613        slli    12              20
+00169693        slli    13               2
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              40
+00169693        slli    13               4
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              80
+00169693        slli    13               8
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             160
+00169693        slli    13              16
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             320
+00169693        slli    13              32
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12             640
+00169693        slli    13              64
+feb66ae3        bltu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13              32
+00165613        srli    12             320
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11               3
+00d56533        or      10              32
+0016d693        srli    13              16
+00165613        srli    12             160
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               8
+00165613        srli    12              80
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               4
+00165613        srli    12              40
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               2
+00165613        srli    12              20
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               1
+00165613        srli    12              10
+fe0696e3        bne
+00c5e663        bltu
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00050493        addi     9              32
+fd3a46e3        blt
+00a00593        addi    11              10
+00048513        addi    10              32
+10c000ef        jal
+00008293        addi     5            4176
+0005ca63        blt
+00054c63        blt
+f79ff0ef        jal
+00058613        addi    12              10
+00050593        addi    11              32
+fff00513        addi    10      4294967295
+02060c63        beq
+00100693        addi    13               1
+00b67a63        bgeu
+00c05863        bge
+00161613        slli    12              20
+00169693        slli    13               2
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              40
+00169693        slli    13               4
+feb66ae3        bltu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13               2
+00165613        srli    12              20
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              12
+00d56533        or      10               2
+0016d693        srli    13               1
+00165613        srli    12              10
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11               2
+00d56533        or      10               3
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00058513        addi    10               2
+00028067        jalr
+00040a93        addi    21               7
+00140413        addi     8               8
+03050793        addi    15              50
+00890733        add     14          131004
+00048513        addi    10              32
+00a00593        addi    11              10
+fef70fa3        sb          131003
+00048993        addi    19              32
+064000ef        jal
+06054063        blt
+0605c663        blt
+00058613        addi    12              10
+00050593        addi    11              32
+fff00513        addi    10      4294967295
+02060c63        beq
+00100693        addi    13               1
+00b67a63        bgeu
+00c05863        bge
+00161613        slli    12              20
+00169693        slli    13               2
+feb66ae3        bltu
+00c05863        bge
+00161613        slli    12              40
+00169693        slli    13               4
+feb66ae3        bltu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13               2
+00165613        srli    12              20
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11              12
+00d56533        or      10               2
+0016d693        srli    13               1
+00165613        srli    12              10
+fe0696e3        bne
+00c5e663        bltu
+40c585b3        sub     11               2
+00d56533        or      10               3
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00050493        addi     9               3
+fd3a46e3        blt
+00a00593        addi    11              10
+00048513        addi    10               3
+10c000ef        jal
+00008293        addi     5            4176
+0005ca63        blt
+00054c63        blt
+f79ff0ef        jal
+00058613        addi    12              10
+00050593        addi    11               3
+fff00513        addi    10      4294967295
+02060c63        beq
+00100693        addi    13               1
+00b67a63        bgeu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00058513        addi    10               3
+00028067        jalr
+00040a93        addi    21               8
+00140413        addi     8               9
+03050793        addi    15              51
+00890733        add     14          131005
+00048513        addi    10               3
+00a00593        addi    11              10
+fef70fa3        sb          131004
+00048993        addi    19               3
+064000ef        jal
+06054063        blt
+0605c663        blt
+00058613        addi    12              10
+00050593        addi    11               3
+fff00513        addi    10      4294967295
+02060c63        beq
+00100693        addi    13               1
+00b67a63        bgeu
+00000513        addi    10               0
+00c5e663        bltu
+0016d693        srli    13               0
+00165613        srli    12               5
+fe0696e3        bne
+00008067        jalr
+00050493        addi     9               0
+fd3a46e3        blt
+000b0c63        beq
+01010793        addi    15          131008
+00878433        add      8          131017
+02d00793        addi    15              45

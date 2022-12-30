@@ -68,6 +68,7 @@ always @(posedge clk) begin
                 //alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新
             end
             `BGE: begin
+                //$display($signed(rs1_value));
                 result        <= ($signed(rs1_value)>=$signed(rs2_value))?1:0;
                 jumping_pc    <= instr_pc+imm;
                 //alu_broadcast <= `FALSE;//因为没有寄存器的数值被更新

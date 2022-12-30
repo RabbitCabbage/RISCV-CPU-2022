@@ -97,6 +97,12 @@ generate
         assign ready[j] = ((busy[j]==`TRUE) && (rs1_rename[j]==`ROBNOTRENAME) && (rs2_rename[j]==`ROBNOTRENAME)); 
     end
 endgenerate
+wire [`ROBINDEX] debug_check_rs1_rename;
+assign debug_check_rs1_rename = rs1_rename[0];
+wire debug_check_busy;
+assign debug_check_busy = busy[0];
+wire [`ROBINDEX] debug_check_rs2_rename;
+assign debug_check_rs2_rename = rs2_rename[0];
 initial begin
     rs_full <= `FALSE;
 end
@@ -131,15 +137,31 @@ always @(posedge clk) begin
         end
         //如果decode这边成功解码，并且有空位置，添加一条指令
         if(decode_success==`TRUE && free_index!=`RSNOTFOUND &&decoder_enable==`TRUE) begin
-            busy[free_index[3:0]]          <= `TRUE;
-            rd_rename[free_index[3:0]]     <= decode_rd_rename;
-            opcode[free_index[3:0]]        <= decode_op;
-            imm[free_index[3:0]]           <= decode_imm;
-            pc[free_index[3:0]]            <= decode_pc;
-            rs1_value[free_index[3:0]]     <= decode_rs1_value;
-            rs2_value[free_index[3:0]]     <= decode_rs2_value;
-            rs1_rename[free_index[3:0]]    <= decode_rs1_rename;
-            rs2_rename[free_index[3:0]]    <= decode_rs2_rename;
+                busy[free_index[3:0]]          <= `TRUE;
+                rd_rename[free_index[3:0]]     <= decode_rd_rename;
+                opcode[free_index[3:0]]        <= decode_op;
+                imm[free_index[3:0]]           <= decode_imm;
+                pc[free_index[3:0]]            <= decode_pc;
+            if(rob_broadcast==`FALSE)begin
+                rs1_value[free_index[3:0]]     <= decode_rs1_value;
+                rs2_value[free_index[3:0]]     <= decode_rs2_value;
+                rs1_rename[free_index[3:0]]    <= decode_rs1_rename;
+                rs2_rename[free_index[3:0]]    <= decode_rs2_rename;
+            end else begin
+                if(rob_update_rename == decode_rs1_rename)begin
+                    rs1_value[free_index[3:0]] <= rob_cbd_value;
+                    rs1_rename[free_index[3:0]] <= `ROBNOTRENAME;
+                end else begin
+                    rs1_value[free_index[3:0]]     <= decode_rs1_value;
+                    rs1_rename[free_index[3:0]]    <= decode_rs1_rename;
+                end
+                if(rob_update_rename == decode_rs2_rename)begin
+                    rs2_value[free_index[3:0]] <= rob_cbd_value;
+                    rs2_rename[free_index[3:0]] <= `ROBNOTRENAME;
+                end else begin
+                    rs2_value[free_index[3:0]]     <= decode_rs2_value;
+                    rs2_rename[free_index[3:0]]    <= decode_rs2_rename;
+            end
         end     
         //monitor alu lsb and rob
         
@@ -156,22 +178,11 @@ always @(posedge clk) begin
                 end
             end
         end
-        if(rob_broadcast==`TRUE) begin
-            for(i=0;i<16;i=i+1) begin
-                    if(busy[i]) begin
-                    if(rs1_rename[i]==rob_update_rename) begin
-                        rs1_rename[i] <= `ROBNOTRENAME;
-                        rs1_value[i]  <= rob_cbd_value;
-                    end else if(rs2_rename[i]==rob_update_rename) begin
-                        rs2_rename[i] <= `ROBNOTRENAME;
-                        rs2_value[i]  <= rob_cbd_value;
-                    end
-                end
-            end
-        end
     end
 end
+end
 always @(posedge alu_broadcast) begin
+    if(jump_wrong==`FALSE && rdy == `TRUE)begin
             alu_busy <= `FALSE;
             debug_alu_not_busy <= debug_alu_not_busy + 1;
             for(i=0;i<16;i=i+1) begin
@@ -186,5 +197,22 @@ always @(posedge alu_broadcast) begin
                     end
                 end
             end
+    end
+end
+always @(posedge rob_broadcast) begin
+    if(jump_wrong==`FALSE && rdy == `TRUE)begin
+            for(i=0;i<16;i=i+1) begin
+                    if(busy[i]) begin
+                        if(rs1_rename[i]==rob_update_rename) begin
+                            rs1_rename[i] <= `ROBNOTRENAME;
+                            rs1_value[i]  <= rob_cbd_value;
+                        end
+                        if(rs2_rename[i]==rob_update_rename) begin
+                            rs2_rename[i] <= `ROBNOTRENAME;
+                            rs2_value[i]  <= rob_cbd_value;
+                        end
+                end
+            end
         end
+end
 endmodule

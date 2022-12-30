@@ -85,14 +85,14 @@ module Decoder(
 assign rob_fetch_rs1_index                   = from_reg_rs1_rob_rename;//regfile送回来rename
 assign rob_fetch_rs2_index                   = from_reg_rs2_rob_rename;//regfile送回来rename
 //assign to_reg_rd_rename                      = rob_free_tag;//rob空的tag赋给rd作为rename
-assign to_lsb_rs1_value                             = (reg_rs1_renamed==`FALSE)?reg_rs1_value:(rob_rs1_ready==`TRUE)?rob_fetch_rs1_value:`NULL32;
-assign to_rs_rs1_value                             = (reg_rs1_renamed==`FALSE)?reg_rs1_value:(rob_rs1_ready==`TRUE)?rob_fetch_rs1_value:`NULL32;
-assign to_lsb_rs2_value                             = (reg_rs2_renamed==`FALSE)?reg_rs2_value:(rob_rs2_ready==`TRUE)?rob_fetch_rs2_value:`NULL32;
-assign to_rs_rs2_value                             = (reg_rs2_renamed==`FALSE)?reg_rs2_value:(rob_rs2_ready==`TRUE)?rob_fetch_rs2_value:`NULL32;
-assign to_rs_rs1_rename                            = (reg_rs1_renamed==`FALSE)?`ROBNOTRENAME:((rob_rs1_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs1_rob_rename);
-assign to_lsb_rs1_rename                            = (reg_rs1_renamed==`FALSE)?`ROBNOTRENAME:((rob_rs1_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs1_rob_rename);
-assign to_rs_rs2_rename                            = (reg_rs2_renamed==`FALSE)?`ROBNOTRENAME:(rob_rs2_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs2_rob_rename;
-assign to_lsb_rs2_rename                            = (reg_rs2_renamed==`FALSE)?`ROBNOTRENAME:(rob_rs2_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs2_rob_rename;
+assign to_lsb_rs1_value                             = (to_reg_rs1_index==0?0:((reg_rs1_renamed==`FALSE)?reg_rs1_value:(rob_rs1_ready==`TRUE)?rob_fetch_rs1_value:`NULL32));
+assign to_rs_rs1_value                             = (to_reg_rs1_index==0?0:((reg_rs1_renamed==`FALSE)?reg_rs1_value:(rob_rs1_ready==`TRUE)?rob_fetch_rs1_value:`NULL32));
+assign to_lsb_rs2_value                             = (to_reg_rs2_index==0?0:((reg_rs2_renamed==`FALSE)?reg_rs2_value:(rob_rs2_ready==`TRUE)?rob_fetch_rs2_value:`NULL32));
+assign to_rs_rs2_value                             = (to_reg_rs2_index==0?0:((reg_rs2_renamed==`FALSE)?reg_rs2_value:(rob_rs2_ready==`TRUE)?rob_fetch_rs2_value:`NULL32));
+assign to_rs_rs1_rename                            = (to_reg_rs1_index==0?`ROBNOTRENAME:((reg_rs1_renamed==`FALSE)?`ROBNOTRENAME:((rob_rs1_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs1_rob_rename)));
+assign to_lsb_rs1_rename                            = (to_reg_rs1_index==0?`ROBNOTRENAME:((reg_rs1_renamed==`FALSE)?`ROBNOTRENAME:((rob_rs1_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs1_rob_rename)));
+assign to_rs_rs2_rename                            = (to_reg_rs2_index==0?`ROBNOTRENAME:((reg_rs2_renamed==`FALSE)?`ROBNOTRENAME:(rob_rs2_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs2_rob_rename));
+assign to_lsb_rs2_rename                            = (to_reg_rs2_index==0?`ROBNOTRENAME:((reg_rs2_renamed==`FALSE)?`ROBNOTRENAME:(rob_rs2_ready==`TRUE)?`ROBNOTRENAME:from_reg_rs2_rob_rename));
 //assign opcode = instr[`OPCODE];
 assign to_rob_op = op;
 assign to_rs_op = op;
@@ -102,6 +102,7 @@ always @(posedge clk) begin
     if(rst == `TRUE || jump_wrong == `TRUE) begin
         enable_lsb <= `FALSE;
         enable_rs <= `FALSE;
+        decode_success <= `FALSE;
     end else if(rdy==`TRUE && IF_success==`TRUE) begin
         decode_success                       <= `TRUE;
         to_reg_rd_rename                      <= rob_free_tag;

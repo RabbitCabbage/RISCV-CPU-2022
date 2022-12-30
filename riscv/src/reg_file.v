@@ -34,8 +34,12 @@ reg [`ROBINDEX] reg_rename [`REGSIZE];//用RS的标号来rename用这条指令�
 integer i;
 wire[`DATALEN] debug_check;
 wire [`ROBINDEX] debug_rename_check;
-assign debug_check=reg_value[19];
-assign debug_rename_check = reg_rename[19];
+assign debug_check=reg_value[10];
+assign debug_rename_check = reg_rename[10];
+wire[`DATALEN] debug_check_;
+wire [`ROBINDEX] debug_rename_check_;
+assign debug_check_=reg_value[13];
+assign debug_rename_check_ = reg_rename[13];
 always @(posedge clk)begin
     if(rst==`TRUE) begin
         for(i=0;i<`REGSIZESCALAR;i=i+1)begin
@@ -53,19 +57,22 @@ always @(posedge clk)begin
                 end
             end else begin
                 if(rob_enable == `TRUE) begin
-                    reg_rename[rob_commit_index] <= `ROBNOTRENAME;
-                    renamed[rob_commit_index] <= `FALSE;
+                    //如果commit的是这条reg在等的最后结果才能说不被重命名，要不然你不保证reg正在被这条commit之后的指令重命名，你没有这个权限去改别人的重命名
+                    if(rob_commit_rename==reg_rename[rob_commit_index])begin
+                        reg_rename[rob_commit_index] <= `ROBNOTRENAME;
+                        renamed[rob_commit_index] <= `FALSE;
+                    end
                     if(rob_commit_index==0) begin reg_value[0] <= `NULL32;end
                     else begin reg_value[{27'b0, rob_commit_index}] <= rob_commit_value; end                
                 end
-                //下面是回答decoder的问题，但是要先拿值再记下重命名
-                //防止出现用rs1=x，rd=x，这样就会自己重命名自己没有意义
-                
             end
         end
     end
 end
+//下面是回答decoder的问题，但是要先拿值再记下重命名
+//防止出现用rs1=x，rd=x，这样就会自己重命名自己没有意义
 always @(posedge decoder_success)begin
+    if(rdy==`TRUE && jump_wrong == `FALSE) begin
                     to_decoder_rs1_value <= reg_value[from_decoder_rs1_index];
                     //如果本身这条指令不用rs1的值，那就直接说没有rename
                     to_decoder_rs1_rename <= (decoder_need_rs1? reg_rename[from_decoder_rs1_index] : `ROBNOTRENAME);
@@ -73,12 +80,10 @@ always @(posedge decoder_success)begin
                     to_decoder_rs2_value <= reg_value[from_decoder_rs2_index];
                     to_decoder_rs2_rename <= (decoder_need_rs2 ? reg_rename[from_decoder_rs2_index] : `ROBNOTRENAME);
                     rs2_renamed <= (decoder_need_rs2 ? renamed[from_decoder_rs2_index] : `FALSE);
-                    for(i=0;i<`REGSIZESCALAR;i=i+1) begin
-                        //首先要检查这个指令是不是要写reg，否则它的reg rename不能随便填
-                        if(decoder_have_rd_waiting==`TRUE && {27'b0,from_decoder_rd_index}==i) begin
-                            reg_rename[i] <= decoder_rd_rename;
-                            renamed[i] <= `TRUE;
-                        end
+                    if(decoder_have_rd_waiting==`TRUE) begin
+                        reg_rename[from_decoder_rd_index] <= decoder_rd_rename;
+                        renamed[from_decoder_rd_index] <= `TRUE;
                     end
                 end
+end
 endmodule

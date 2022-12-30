@@ -127,7 +127,6 @@ wire lsb_write_signal_to_memctrl;
 wire [`LSBINSTRLEN]lsb_requiring_length_to_memctrl;
 wire [`DATALEN] lsb_store_data_to_memctrl;
 wire [`ADDR] lsb_addr_to_memctrl;
-wire lsb_load_signed_to_memctrl;
 wire memctrl_load_success_to_lsb;
 wire [`DATALEN] memctrl_load_data_to_lsb;
 wire memctrl_store_success_to_lsb;
@@ -161,6 +160,7 @@ wire [`DATALEN] lsb_load_data_to_rob;
 wire [`LSBINSTRLEN] rob_length_lsb;
 wire lsb_store_instr_ready_to_rob;
 wire [`ROBINDEX] lsb_ready_store_instr_rename_to_rob;
+wire [`DATALEN] lsb_store_value_to_rob;
 //下面表示的是rob从lsb那里得到计算出来的目标destination mem addr
 wire lsb_enable_calculated_addr_to_rob;
 wire [`ADDR] lsb_calculated_destination_addr_to_rob;
@@ -234,6 +234,7 @@ ROB rob_
       .lsb_update_rename             (lsb_broadcast_rename),
       .lsb_store_instr_ready         (lsb_store_instr_ready_to_rob),
       .lsb_ready_store_instr_rename        (lsb_ready_store_instr_rename_to_rob),
+      .lsb_store_value(lsb_store_value_to_rob),
       .rob_broadcast                 (rob_broadcast),
       .rob_update_rename             (rob_broadcast_rename),
       .rob_cbd_value                 (rob_broadcast_result),
@@ -379,7 +380,6 @@ MemCtrl memctrl_
       .lsb_read_signal    (lsb_read_signal_to_memctrl),
       .lsb_addr           (lsb_addr_to_memctrl),
       .lsb_len            (lsb_requiring_length_to_memctrl),
-      .lsb_load_signed    (lsb_load_signed_to_memctrl),
       .lsb_write_data     (lsb_store_data_to_memctrl),
       .lsb_read_data      (memctrl_load_data_to_lsb),
       .lsb_load_success        (memctrl_load_success_to_lsb),
@@ -460,7 +460,6 @@ LSB lsb_
       .requiring_length   (lsb_requiring_length_to_memctrl),
       .to_mem_data        (lsb_store_data_to_memctrl),
       .to_mem_addr        (lsb_addr_to_memctrl),
-      .load_signed        (lsb_load_signed_to_memctrl),
       .mem_load_success   (memctrl_load_success_to_lsb),
       .mem_store_success  (memctrl_store_success_to_lsb),
       .from_mem_data      (memctrl_load_data_to_lsb),
@@ -491,6 +490,7 @@ LSB lsb_
       .lsb_update_rename  (lsb_broadcast_rename),
       .lsb_store_instr_ready(lsb_store_instr_ready_to_rob),
       .lsb_ready_store_instr_rename(lsb_ready_store_instr_rename_to_rob),
+      .lsb_store_value(lsb_store_value_to_rob),
       .lsb_full           (lsb_full),
       .lsb_destination_addr_to_rob(lsb_calculated_destination_addr_to_rob),
       .lsb_calculated_addr_signal (lsb_enable_calculated_addr_to_rob),

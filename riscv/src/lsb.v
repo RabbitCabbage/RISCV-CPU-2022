@@ -12,7 +12,6 @@ module LSB(
     output reg[`LSBINSTRLEN] requiring_length,
     output reg[`DATALEN] to_mem_data,
     output reg[`ADDR] to_mem_addr,
-    output reg load_signed,
     input wire mem_load_success,
     input wire mem_store_success,
     input wire [`DATALEN] from_mem_data,
@@ -44,6 +43,7 @@ module LSB(
     output reg [`ROBINDEX] lsb_rename_to_rob_for_the_calculated_instr,
     output reg lsb_store_instr_ready,
     output reg[`ROBINDEX] lsb_ready_store_instr_rename,
+    output reg[`DATALEN] lsb_store_value,
 
     //from alu cbd
     input wire alu_broadcast,
@@ -90,6 +90,8 @@ assign debug_head_busy = busy[head[3:0]];
 assign debug_head_addr_ready = addr_ready[head[3:0]];
 assign debug_head_rs2_rename = rs2_rename[head[3:0]];
 assign debug_head_ready = issue_ready[head[3:0]];
+wire [`ROBINDEX]debug_head_rs1_rename;
+assign debug_head_rs1_rename=rs1_rename[head[3:0]];
 assign to_calculate = (calculate_ready[0] ? 0 :(
                             calculate_ready[1] ? 1 : (
                                 calculate_ready[2] ? 2 : (
@@ -115,7 +117,9 @@ generate
     end
 endgenerate
 integer j;
+integer out_file;
 initial begin
+    out_file = $fopen("../test.txt","w");
     lsb_full <= `FALSE;
 end
 //从decoder送过来是有顺序的，执行的时候也应该是有顺序的，因此每次只能执行最首的那个
@@ -146,17 +150,17 @@ always @(posedge clk) begin
                     // addr_ready[head[3:0]] <= `FALSE;
                     // lsb_update_rename <= rob_index[head[3:0]];
                     if(rob_enable_lsb_write==`TRUE) begin
-                        case(op[head[3:0]])
-                        `SB: begin
-                            $display("%h\tsb\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
-                        end
-                        `SH: begin
-                            $display("%h\tsh\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
-                        end
-                        `SW: begin
-                            $display("%h\tsw\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
-                        end
-                        endcase
+                        // case(op[head[3:0]])
+                        // `SB: begin
+                        //     $display(out_file,"%h\tsb\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
+                        // end
+                        // `SH: begin
+                        //     $display(out_file,"%h\tsh\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
+                        // end
+                        // `SW: begin
+                        //     $display(out_file,"%h\tsw\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
+                        // end
+                        // endcase
                         lsb_write_signal <= `TRUE;
                         lsb_read_signal <= `FALSE;
                         //lsb_write_signed <= ;//todo 表示是否是signed，或者你就处理好直接拿给memctrl就可以写
@@ -173,6 +177,7 @@ always @(posedge clk) begin
                     end else begin
                         lsb_store_instr_ready <= `TRUE;
                         lsb_ready_store_instr_rename <= rob_index[head[3:0]];
+                        lsb_store_value <= rs2_value[head[3:0]];
                     end
                 end
                 `LB,`LBU,`LH,`LHU,`LW: begin
@@ -182,7 +187,6 @@ always @(posedge clk) begin
                     lsb_read_signal <= `TRUE;
                     lsb_update_rename <= rob_index[head[3:0]];
                     to_mem_addr <= destination_mem_addr[head[3:0]];
-                    load_signed <= (op[head[3:0]]==`LHU || op[head[3:0]]==`LBU)? `FALSE : `TRUE;
                     lsb_store_instr_ready <= `FALSE;
                     case(op[head[3:0]])
                         `LB,`LBU: begin 
@@ -205,13 +209,14 @@ always @(posedge clk) begin
         end
         if(mem_load_success==`TRUE) begin
             lsb_broadcast <= `TRUE;
-            lsb_cbd_value <= from_mem_data;
             lsb_update_rename <= rob_index[head[3:0]];
             busy[head[3:0]] <= `FALSE;
             addr_ready[head[3:0]] <= `FALSE;
             occupied <= occupied - 1;
             head <= (head + 1) % `ROBNOTRENAME;
             lsb_read_signal <= `FALSE;
+            lsb_cbd_value <= (op[head[3:0]]==`LHU || op[head[3:0]]==`LBU)? $unsigned(from_mem_data) : $signed(from_mem_data);
+            // load_signed <= (op[head[3:0]]==`LHU || op[head[3:0]]==`LBU)? `FALSE : `TRUE;
         end else begin
             lsb_broadcast <= `FALSE;
         end
@@ -222,7 +227,7 @@ always @(posedge clk) begin
         end
         //calculate the required address
         if(to_calculate != `LSBNOTRENAME) begin
-            destination_mem_addr[to_calculate[3:0]] <= rs1_value[to_calculate[3:0]] + imms[to_calculate[3:0]];
+            destination_mem_addr[to_calculate[3:0]] <= rs1_value[to_calculate[3:0]] + $signed(imms[to_calculate[3:0]]);
             addr_ready[to_calculate[3:0]] <=  `TRUE;
             lsb_destination_addr_to_rob <= rs1_value[to_calculate[3:0]] + imms[to_calculate[3:0]];
             lsb_calculated_addr_signal <= `TRUE;
@@ -235,10 +240,26 @@ always @(posedge clk) begin
         if(decode_signal==`TRUE && occupied != 16 && decoder_enable==`TRUE) begin
             busy[next] <= `TRUE;
             rob_index[next] <= decoder_rd_rename;
-            rs1_rename[next] <= decoder_rs1_rename;
-            rs2_rename[next] <= decoder_rs2_rename;
-            rs1_value[next] <= decoder_rs1_value;
-            rs2_value[next] <= decoder_rs2_value;
+            if(alu_broadcast == `TRUE && alu_update_rename==decoder_rs1_rename)begin 
+                rs1_rename[next] <= `ROBNOTRENAME; 
+                rs1_value[next] <= alu_cbd_value;
+            end else if(rob_broadcast == `TRUE && rob_update_rename==decoder_rs1_rename)begin 
+                rs1_rename[next] <= `ROBNOTRENAME; 
+                rs1_value[next] <= rob_cbd_value;
+            end else begin
+                rs1_rename[next] <= decoder_rs1_rename;
+                rs1_value[next] <= decoder_rs1_value;
+            end
+            if(alu_broadcast == `TRUE && alu_update_rename==decoder_rs2_rename)begin 
+                rs2_rename[next] <= `ROBNOTRENAME; 
+                rs2_value[next] <= alu_cbd_value;
+            end else if(rob_broadcast == `TRUE && rob_update_rename==decoder_rs2_rename)begin 
+                rs2_rename[next] <= `ROBNOTRENAME; 
+                rs2_value[next] <= rob_cbd_value;
+            end else begin
+                rs2_rename[next] <= decoder_rs2_rename;
+                rs2_value[next] <= decoder_rs2_value;
+            end
             imms[next] <= decoder_imm;
             pc[next] <= decoder_pc;
             op[next] <= decoder_op;
@@ -258,7 +279,7 @@ always @(posedge clk) begin
             end
             if(rob_broadcast==`TRUE) begin
                 if(rob_update_rename==rs1_rename[j]) begin
-                    rs1_value[j] <= alu_cbd_value;
+                    rs1_value[j] <= rob_cbd_value;
                     rs1_rename[j] <= `ROBNOTRENAME;
                 end
                 if(rob_update_rename==rs2_rename[j]) begin
