@@ -11,6 +11,7 @@ module Decoder(
     input wire IF_success,
     input wire [`INSTRLEN] instr,
     input wire[`ADDR] fetch_pc,
+    input wire stall_decoder,
 
     //raw information decoded
     // to RS
@@ -99,7 +100,7 @@ assign to_rs_op = op;
 assign to_lsb_op = op;
 always @(posedge clk) begin
     //rst has nothing on this module, because this module has nothing stored in itself.
-    if(rst == `TRUE || jump_wrong == `TRUE) begin
+    if(rst == `TRUE || jump_wrong == `TRUE || stall_decoder==`TRUE) begin
         enable_lsb <= `FALSE;
         enable_rs <= `FALSE;
         decode_success <= `FALSE;

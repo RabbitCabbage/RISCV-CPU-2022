@@ -48,6 +48,7 @@ reg  new_addr_assigned_to_start_addr;
 reg [`ADDR] tmp_check_new_addr;
 reg [`BYTELEN]debug_byte_read;
 integer debug_enable_mem;
+integer debug_wr_change;
 always @(posedge clk) begin
     if(rst == `TRUE || jump_wrong==`TRUE) begin
         working <= `FALSE;
@@ -67,9 +68,10 @@ always @(posedge clk) begin
         if(working==`TRUE) begin
             // 如果是向IO进行读写就不应该再把地址加一加二操作了。
             if(mem_addr[17:16]==2'b11) begin
-                if(icache_read_signal==`TRUE || lsb_read_signal==`TRUE) begin //I/O read
+                if(lsb_read_signal==`TRUE) begin //I/O read
                 //load word/half word/ byte
                     read_write                       <= `READ;
+                    debug_wr_change <= 0;
                     if(finished == requiring_len) begin
                         //requiring length has been read
                         if(for_lsb_ic == 0) begin 
@@ -81,6 +83,7 @@ always @(posedge clk) begin
                             lsb_load_success              <= `FALSE;
                             icache_read_instr        <= ultimate_data;
                         end
+                        lsb_store_success <= `FALSE;
                         working                      <= `FALSE;
                         //mem_addr                     <= start_addr;
                         mem_enable                   <= `FALSE;
@@ -115,9 +118,11 @@ always @(posedge clk) begin
                 end else begin //I/O write, that is lsb wirte into memory
                 //Store word/half word/byte
                     read_write                       <= `WRITE;
+                    debug_wr_change <= 1;
                     if(finished == requiring_len - 3'b001) begin
                         icache_success               <= `FALSE;
                         lsb_store_success                  <= `TRUE;
+                        lsb_load_success <= `FALSE;
                         working                      <= `FALSE;
                         //mem_addr                     <= start_addr;
                         mem_enable                   <= `FALSE;
@@ -243,6 +248,9 @@ always @(posedge clk) begin
         // Begin a new instruction.
         else begin
             if((lsb_read_signal == `TRUE || lsb_write_signal == `TRUE) && lsb_load_success == `FALSE && lsb_store_success == `FALSE &&  new_addr_assigned_to_start_addr == `FALSE) begin
+                // if(lsb_addr==196608)begin
+                //     $write("mem_ctrl get\t");
+                // end
                 if(lsb_read_signal == `TRUE) begin
                     ultimate_data                    <= `NULL32;
                     working                          <= `TRUE;
@@ -253,6 +261,7 @@ always @(posedge clk) begin
                     new_addr_assigned_to_start_addr  <= `TRUE;
                     mem_enable                       <= `TRUE;
                     read_write                       <= `READ;
+                    debug_wr_change <= 2;
                     //先读进来一个byte
                     requiring_len                    <= lsb_len;
                     finished                         <= 3'b000;
@@ -265,6 +274,7 @@ always @(posedge clk) begin
                     for_lsb_ic                       <= 1'b0;
                     //start_addr                       <= lsb_addr;
                     read_write                       <= `WRITE;
+                    debug_wr_change <= 3;
                     requiring_len                    <= lsb_len;
                     finished                         <= 3'b000;
                     icache_success                   <= `FALSE;
@@ -285,6 +295,7 @@ always @(posedge clk) begin
                 for_lsb_ic                           <= 1'b1;//working for icache;
                 //start_addr                           <= icache_addr;
                 read_write                           <= `READ;
+                debug_wr_change <= 4;
                 mem_addr                             <= new_addr;//先读进来一个byte
                 start_addr                           <= new_addr;
                 new_addr_assigned_to_start_addr      <= `TRUE;
@@ -299,7 +310,6 @@ always @(posedge clk) begin
                 icache_success                       <= `FALSE;
                 lsb_load_success                      <= `FALSE;
                 lsb_store_success                     <= `FALSE;
-                read_write                           <= `NULL1;
                 mem_addr                             <= `NULL32;
                 mem_enable                           <= `FALSE;
                 mem_byte_write                       <= `NULL8;

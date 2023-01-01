@@ -142,12 +142,7 @@ always @(posedge clk) begin
                 opcode[free_index[3:0]]        <= decode_op;
                 imm[free_index[3:0]]           <= decode_imm;
                 pc[free_index[3:0]]            <= decode_pc;
-            if(rob_broadcast==`FALSE)begin
-                rs1_value[free_index[3:0]]     <= decode_rs1_value;
-                rs2_value[free_index[3:0]]     <= decode_rs2_value;
-                rs1_rename[free_index[3:0]]    <= decode_rs1_rename;
-                rs2_rename[free_index[3:0]]    <= decode_rs2_rename;
-            end else begin
+            if(rob_broadcast==`TRUE)begin//防止broadcast的时间冲突造成更新不成功
                 if(rob_update_rename == decode_rs1_rename)begin
                     rs1_value[free_index[3:0]] <= rob_cbd_value;
                     rs1_rename[free_index[3:0]] <= `ROBNOTRENAME;
@@ -161,28 +156,49 @@ always @(posedge clk) begin
                 end else begin
                     rs2_value[free_index[3:0]]     <= decode_rs2_value;
                     rs2_rename[free_index[3:0]]    <= decode_rs2_rename;
-            end
-        end     
-        //monitor alu lsb and rob
-        
-        if(lsb_broadcast==`TRUE) begin
-            for(i=0;i<16;i=i+1) begin
-                if(busy[i]==`TRUE) begin
-                    if(rs1_rename[i]==lsb_update_rename) begin
-                        rs1_rename[i] <= `ROBNOTRENAME;
-                        rs1_value[i]  = lsb_cbd_value;
-                    end else if(rs2_rename[i]==lsb_update_rename) begin
-                        rs2_rename[i] <= `ROBNOTRENAME;
-                        rs2_value[i]  <= lsb_cbd_value;
-                    end
+                end 
+            end else if(alu_broadcast == `TRUE) begin
+                if(alu_update_rename == decode_rs1_rename)begin
+                    rs1_value[free_index[3:0]] <= alu_cbd_value;
+                    rs1_rename[free_index[3:0]] <= `ROBNOTRENAME;
+                end else begin
+                    rs1_value[free_index[3:0]]     <= decode_rs1_value;
+                    rs1_rename[free_index[3:0]]    <= decode_rs1_rename;
                 end
+                if(alu_update_rename == decode_rs2_rename)begin
+                    rs2_value[free_index[3:0]] <= alu_cbd_value;
+                    rs2_rename[free_index[3:0]] <= `ROBNOTRENAME;
+                end else begin
+                    rs2_value[free_index[3:0]]     <= decode_rs2_value;
+                    rs2_rename[free_index[3:0]]    <= decode_rs2_rename;
+                end 
+            end else if(lsb_broadcast == `TRUE) begin
+                if(lsb_update_rename == decode_rs1_rename)begin
+                    rs1_value[free_index[3:0]] <= lsb_cbd_value;
+                    rs1_rename[free_index[3:0]] <= `ROBNOTRENAME;
+                end else begin
+                    rs1_value[free_index[3:0]]     <= decode_rs1_value;
+                    rs1_rename[free_index[3:0]]    <= decode_rs1_rename;
+                end
+                if(lsb_update_rename == decode_rs2_rename)begin
+                    rs2_value[free_index[3:0]] <= lsb_cbd_value;
+                    rs2_rename[free_index[3:0]] <= `ROBNOTRENAME;
+                end else begin
+                    rs2_value[free_index[3:0]]     <= decode_rs2_value;
+                    rs2_rename[free_index[3:0]]    <= decode_rs2_rename;
+                end 
+            end else begin
+                rs1_value[free_index[3:0]]     <= decode_rs1_value;
+                rs2_value[free_index[3:0]]     <= decode_rs2_value;
+                rs1_rename[free_index[3:0]]    <= decode_rs1_rename;
+                rs2_rename[free_index[3:0]]    <= decode_rs2_rename;
             end
-        end
+        //monitor alu lsb and rob 
     end
 end
 end
 always @(posedge alu_broadcast) begin
-    if(jump_wrong==`FALSE && rdy == `TRUE)begin
+    if(jump_wrong==`FALSE && rdy == `TRUE && rst == `FALSE)begin
             alu_busy <= `FALSE;
             debug_alu_not_busy <= debug_alu_not_busy + 1;
             for(i=0;i<16;i=i+1) begin
@@ -199,8 +215,23 @@ always @(posedge alu_broadcast) begin
             end
     end
 end
+always @(posedge lsb_broadcast) begin
+    if(jump_wrong==`FALSE && rdy == `TRUE && rst==`FALSE) begin
+            for(i=0;i<16;i=i+1) begin
+                if(busy[i]==`TRUE) begin
+                    if(rs1_rename[i]==lsb_update_rename) begin
+                        rs1_rename[i] <= `ROBNOTRENAME;
+                        rs1_value[i]  = lsb_cbd_value;
+                    end else if(rs2_rename[i]==lsb_update_rename) begin
+                        rs2_rename[i] <= `ROBNOTRENAME;
+                        rs2_value[i]  <= lsb_cbd_value;
+                    end
+                end
+            end
+    end
+end
 always @(posedge rob_broadcast) begin
-    if(jump_wrong==`FALSE && rdy == `TRUE)begin
+    if(jump_wrong==`FALSE && rdy == `TRUE && rst==`FALSE)begin
             for(i=0;i<16;i=i+1) begin
                     if(busy[i]) begin
                         if(rs1_rename[i]==rob_update_rename) begin

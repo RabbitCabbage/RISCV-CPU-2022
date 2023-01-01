@@ -183,6 +183,7 @@ wire predictor_stall_if;
 wire [`OPLEN]alu_broadcast_op;
 wire predictor_enable_if;
 assign stall_IF = (rs_full==`TRUE || rob_full==`TRUE || lsb_full==`TRUE || predictor_stall_if==`TRUE);
+assign stall_decoder = (rs_full==`TRUE || rob_full==`TRUE || lsb_full==`TRUE);
 wire ifetch_jump_change_success_to_rob;
 
 // initial begin
@@ -235,6 +236,7 @@ ROB rob_
       .lsb_store_instr_ready         (lsb_store_instr_ready_to_rob),
       .lsb_ready_store_instr_rename        (lsb_ready_store_instr_rename_to_rob),
       .lsb_store_value(lsb_store_value_to_rob),
+      .lsb_store_success(memctrl_store_success_to_lsb),
       .rob_broadcast                 (rob_broadcast),
       .rob_update_rename             (rob_broadcast_rename),
       .rob_cbd_value                 (rob_broadcast_result),
@@ -289,6 +291,7 @@ Decoder decoder_
       .clk                          (clk_in),
       .rst                          (rst_in),
       .rdy                          (rdy_in),
+      .stall_decoder                (stall_decoder),
       .IF_success                   (if_success_to_decoder),
       .instr                        (if_instr_to_decoder),
       .fetch_pc                     (if_pc_to_decoder),

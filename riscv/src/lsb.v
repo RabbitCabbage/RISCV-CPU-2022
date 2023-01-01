@@ -1,4 +1,5 @@
 `include "define.v"
+`timescale 1ps/1ps
 module LSB(
     //control signals
     input wire clk,
@@ -41,6 +42,7 @@ module LSB(
     output reg lsb_calculated_addr_signal,
     output reg [`ADDR]lsb_destination_addr_to_rob,
     output reg [`ROBINDEX] lsb_rename_to_rob_for_the_calculated_instr,
+
     output reg lsb_store_instr_ready,
     output reg[`ROBINDEX] lsb_ready_store_instr_rename,
     output reg[`DATALEN] lsb_store_value,
@@ -70,6 +72,7 @@ reg [`DATALEN]      rs1_value[`LSBSIZE];
 reg [`DATALEN]      rs2_value[`LSBSIZE];
 reg [`ROBINDEX]     rs1_rename[`LSBSIZE];
 reg [`ROBINDEX]     rs2_rename[`LSBSIZE];
+reg                 store_instr_sent_to_rob[`LSBSIZE];//标记这个store是不是被送过去了
 wire                 calculate_ready[`LSBSIZE];
 wire                 issue_ready[`LSBSIZE];
 
@@ -113,13 +116,13 @@ genvar i;
 generate 
     for(i=0;i<`LSBSIZESCALAR;i=i+1) begin
         assign issue_ready[i] = (rst == `FALSE && jump_wrong == `FALSE &&busy[i]==`TRUE && addr_ready[i]==`TRUE && rs2_rename[i] == `ROBNOTRENAME);
-        assign calculate_ready[i] = (rst == `FALSE && jump_wrong == `FALSE &&busy[i]==`TRUE && addr_ready[i]==`FALSE && rs1_rename[i] == `ROBNOTRENAME);//一旦addr计算好了，这个calculate ready也变成了false，这样to_calculate就可以不重复算
+        assign calculate_ready[i] = (rst == `FALSE && jump_wrong == `FALSE && busy[i]==`TRUE && addr_ready[i]==`FALSE && rs1_rename[i] == `ROBNOTRENAME);//一旦addr计算好了，这个calculate ready也变成了false，这样to_calculate就可以不重复算
     end
 endgenerate
 integer j;
 integer out_file;
 initial begin
-    out_file = $fopen("../test.txt","w");
+    out_file = $fopen("../tmp.txt","w");
     lsb_full <= `FALSE;
 end
 //从decoder送过来是有顺序的，执行的时候也应该是有顺序的，因此每次只能执行最首的那个
@@ -149,18 +152,26 @@ always @(posedge clk) begin
                     // busy[head[3:0]] <= `FALSE;
                     // addr_ready[head[3:0]] <= `FALSE;
                     // lsb_update_rename <= rob_index[head[3:0]];
-                    if(rob_enable_lsb_write==`TRUE) begin
+                    if(rob_enable_lsb_write==`TRUE && lsb_write_signal == `FALSE) begin
                         // case(op[head[3:0]])
-                        // `SB: begin
-                        //     $display(out_file,"%h\tsb\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
-                        // end
-                        // `SH: begin
-                        //     $display(out_file,"%h\tsh\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
-                        // end
-                        // `SW: begin
-                        //     $display(out_file,"%h\tsw\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
-                        // end
+                        //     `SB: begin
+                        //         $display(out_file,"%h\tsb\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
+                        //     end
+                        //     `SH: begin
+                        //         $display(out_file,"%h\tsh\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
+                        //     end
+                        //     `SW: begin
+                        //         $display(out_file,"%h\tsw\t%d\t%d",commit_store_instr,rs2_value[head[3:0]],destination_mem_addr[head[3:0]]);
+                        //     end
                         // endcase
+                        // if(destination_mem_addr[head[3:0]]==196608)begin
+                        //     $write("\nascii ",rs2_value[head[3:0]],"\t");
+                        //     case(op[head[3:0]])
+                        //     `SB:begin $write("\tsb\t");end
+                        //     `SH:begin $write("\tsh\t");end
+                        //     `SW:begin $write("\tsw\t");end
+                        //     endcase
+                        // end
                         lsb_write_signal <= `TRUE;
                         lsb_read_signal <= `FALSE;
                         //lsb_write_signed <= ;//todo 表示是否是signed，或者你就处理好直接拿给memctrl就可以写
@@ -175,30 +186,35 @@ always @(posedge clk) begin
                         addr_ready[head[3:0]] <= `FALSE;
                         lsb_update_rename <= rob_index[head[3:0]];
                     end else begin
-                        lsb_store_instr_ready <= `TRUE;
-                        lsb_ready_store_instr_rename <= rob_index[head[3:0]];
-                        lsb_store_value <= rs2_value[head[3:0]];
+                        if(store_instr_sent_to_rob[head[3:0]]==`FALSE) begin
+                            store_instr_sent_to_rob[head[3:0]] <= `TRUE;
+                            lsb_store_instr_ready <= `TRUE;
+                            lsb_ready_store_instr_rename <= rob_index[head[3:0]];
+                            lsb_store_value <= rs2_value[head[3:0]];
+                        end
                     end
                 end
                 `LB,`LBU,`LH,`LHU,`LW: begin
-                    busy[head[3:0]] <= `FALSE;
-                    addr_ready[head[3:0]] <= `FALSE;
-                    lsb_write_signal <= `FALSE;
-                    lsb_read_signal <= `TRUE;
-                    lsb_update_rename <= rob_index[head[3:0]];
-                    to_mem_addr <= destination_mem_addr[head[3:0]];
-                    lsb_store_instr_ready <= `FALSE;
-                    case(op[head[3:0]])
-                        `LB,`LBU: begin 
-                            requiring_length <= `REQUIRE8; 
-                        end
-                        `LH,`LHU: begin 
-                            requiring_length <= `REQUIRE16;
-                        end
-                        default: begin
-                            requiring_length <= `REQUIRE32;
-                        end
-                    endcase
+                    if(lsb_read_signal == `FALSE)begin
+                        busy[head[3:0]] <= `FALSE;
+                        addr_ready[head[3:0]] <= `FALSE;
+                        lsb_write_signal <= `FALSE;
+                        lsb_read_signal <= `TRUE;
+                        lsb_update_rename <= rob_index[head[3:0]];
+                        to_mem_addr <= destination_mem_addr[head[3:0]];
+                        lsb_store_instr_ready <= `FALSE;
+                        case(op[head[3:0]])
+                            `LB,`LBU: begin 
+                                requiring_length <= `REQUIRE8; 
+                            end
+                            `LH,`LHU: begin 
+                                requiring_length <= `REQUIRE16;
+                            end
+                            default: begin
+                                requiring_length <= `REQUIRE32;
+                            end
+                        endcase
+                    end
                 end
                 default: begin 
                     lsb_store_instr_ready <= `FALSE;
@@ -235,11 +251,16 @@ always @(posedge clk) begin
         end else begin
             lsb_calculated_addr_signal <= `FALSE;
         end
-        // add an entry to lsb
-        //todo 如果lsb满了会不会来不及通知decoder，导致decoder会有信息发不出去？
-        if(decode_signal==`TRUE && occupied != 16 && decoder_enable==`TRUE) begin
-            busy[next] <= `TRUE;
+        
+    end
+end
+always @(posedge decode_signal)begin
+    // add an entry to lsb
+    //todo 如果lsb满了会不会来不及通知decoder，导致decoder会有信息发不出去？
+    if(rst==`FALSE && rdy==`TRUE && jump_wrong == `FALSE && occupied != 16 && decoder_enable==`TRUE) begin
+            #1 busy[next] <= `TRUE;
             rob_index[next] <= decoder_rd_rename;
+            store_instr_sent_to_rob[next] <= `FALSE;
             if(alu_broadcast == `TRUE && alu_update_rename==decoder_rs1_rename)begin 
                 rs1_rename[next] <= `ROBNOTRENAME; 
                 rs1_value[next] <= alu_cbd_value;
@@ -266,7 +287,10 @@ always @(posedge clk) begin
             next <= next + 1;
             occupied <= occupied + 1;
         end
-        for(j=0;j<`LSBSIZESCALAR;j=j+1)begin
+end
+always @(posedge alu_broadcast,rob_broadcast) begin
+    if(jump_wrong==`FALSE && rdy == `TRUE && rst==`FALSE)begin
+    for(j=0;j<`LSBSIZESCALAR;j=j+1)begin
             if(alu_broadcast== `TRUE) begin
                 if(alu_update_rename==rs1_rename[j]) begin
                     rs1_value[j] <= alu_cbd_value;
