@@ -6,8 +6,8 @@
 //
 
 //int a[10100];
-int a[10100];
-int n = 10;
+int a[5];
+int n = 3;
 
 int qsrt(int l, int r) {
     int i = l;
