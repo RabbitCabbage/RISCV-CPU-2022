@@ -216,7 +216,10 @@ always @*
         endcase
       end
   end
-
+// integer out_file;
+// initial begin
+//   out_file = $fopen("../io.txt","w");
+// end
 always @*
   begin
     // Setup default FF updates.
@@ -250,6 +253,7 @@ always @*
               d_wr_en   = 1'b1;
             end
             $write("%c", io_din);
+            // $fwrite(out_file,"%c",io_din);
           end
           3'h04: begin      // 0x30004 write: indicates program stop
             if (!tx_full) begin
@@ -259,6 +263,8 @@ always @*
             d_state = S_DECODE; 
             d_program_finish = 1'b1;
             $display("IO:Return");
+            // $fdisplay(out_file,"IO Return");
+            // $fclose(out_file);
             $finish;
           end
         endcase
