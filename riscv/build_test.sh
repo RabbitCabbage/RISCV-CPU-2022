@@ -5,13 +5,13 @@ rpath=$prefix/bin/
 # clearing test dir
 # rm -rf ./test
 # mkdir ./test
-# rm ./test/a.out
-# rm ./test/test.bin
-# rm ./test/test.c
-# rm ./test/test.data
-# rm ./test/test.dump
-# rm ./test/test.o
-# rm ./test/test.om
+rm ./test/a.out
+rm ./test/test.bin
+rm ./test/test.c
+rm ./test/test.data
+rm ./test/test.dump
+rm ./test/test.o
+rm ./test/test.om
 # rm ./test/test.vcd
 # compiling rom
 ${rpath}riscv32-unknown-elf-as -o ./sys/rom.o -march=rv32i ./sys/rom.s
