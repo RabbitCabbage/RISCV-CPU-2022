@@ -1,45 +1,50 @@
 #include "io.h"
-// Target: qsort
-// Possible optimization: Dead code elimination, common expression, strength reduction
-// REMARKS: nothing.
-//
-//
+//考察点：section 8 语句，包括if,while,for,break,continue,return等
+//算法：线性筛法求欧拉函数
+//样例输入：10
+//样例输出：
+//1
+//2
+//2
+//4
+//2
+//6
+//4
+//6
+//4
 
-//int a[10100];
-int a[205];
-int n = 200;
-
-int qsrt(int l, int r) {
-    int i = l;
-    int j = r;
-    int x = a[(l + r) / 2];
-    while (i <= j) {
-        while (a[i] < x) i++;
-        while (a[j] > x) j--;
-        if (i <= j) {
-            int temp = a[i];
-            a[i] = a[j];
-            a[j] = temp;
-            i++;
-            j--;
-        }
-    }
-    if (l < j) qsrt(l, j);
-    if (i < r) qsrt(i, r);
-    return 0;
-}
+int N;
+int M = 0;
+int check[20];
 
 int main() {
-    int i;
-    for (i = 1; i <= n; i++)
-        a[i] = n + 1 - i;
-    qsrt(1, n);
-    for (i = 1; i <= n; i++) {
-		outl(a[i]);
-		print(" ");
-        sleep(1); // to prevent UART buffer from overflowing
+    N = 10;
+	int i = 0;
+	while ( i <= N ) check[i++] = 1;
+	int phi[15];
+	int P[15];
+	phi[1] = 1;
+	for (i = 2; ; ++i ) {
+		if ( i > N ) break;
+		if ( check[i] ) {
+			P[++M] = i;
+			phi[i] = i - 1;
+		}
+		int k = i;
+		int i;
+		for (i = 1; i <= M && (k * P[i] <= N); i++) {
+			int tmp = k * P[i];
+			if ( tmp > N ) continue;
+			check[tmp] = 0;
+			if ( k % P[i] == 0) {
+				phi[tmp] = phi[k] * P[i];
+				break;
+			}
+			else {
+				phi[k * P[i]] = phi[k] * (P[i] - 1);
+			}
+		}
+		outlln(phi[k]);
 	}
-    print("\n");
     return 0;
 }
-
