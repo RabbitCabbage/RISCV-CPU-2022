@@ -162,7 +162,7 @@ always @(posedge clk) begin
            // $write(debug_rob_commit,"\n");
            case(op[head[3:0]])
                `SB: begin
-                    if(io_buffer_full == `FALSE) begin
+                    if(io_buffer_full == `TRUE && (destination_mem_addr[head[3:0]]==196608||destination_mem_addr[head[3:0]]==196612))begin end else begin
                     to_lsb_size <= `REQUIRE8;
                     to_lsb_addr <= destination_mem_addr[head[3:0]];
                     to_lsb_value <= rd_value[head[3:0]];
@@ -172,7 +172,7 @@ always @(posedge clk) begin
                     end
                end
                `SH: begin
-                    if(io_buffer_full == `FALSE) begin
+                    if(io_buffer_full == `TRUE && (destination_mem_addr[head[3:0]]==196608||destination_mem_addr[head[3:0]]==196612))begin end else begin
                     to_lsb_size <= `REQUIRE16;
                     to_lsb_addr <= destination_mem_addr[head[3:0]];
                     to_lsb_value <= rd_value[head[3:0]];
@@ -182,7 +182,7 @@ always @(posedge clk) begin
                     end
                end
                `SW: begin
-                    if(io_buffer_full == `FALSE) begin
+                    if(io_buffer_full == `TRUE && (destination_mem_addr[head[3:0]]==196608||destination_mem_addr[head[3:0]]==196612))begin end else begin
                     // debug_rob_commit <= debug_rob_commit + 1;
                     to_lsb_size <= `REQUIRE32;
                     to_lsb_addr <= destination_mem_addr[head[3:0]];
@@ -230,7 +230,7 @@ always @(posedge clk) begin
                     rob_update_rename <= {1'b0,head[3:0]};
                end
            endcase
-           if((op[head[3:0]]==`SW || op[head[3:0]]==`SB || op[head[3:0]]==`SH)&&io_buffer_full==`TRUE) begin 
+           if((op[head[3:0]]==`SW || op[head[3:0]]==`SB || op[head[3:0]]==`SH) && io_buffer_full==`TRUE && (destination_mem_addr[head[3:0]]==196608||destination_mem_addr[head[3:0]]==196612)) begin 
 
            end else begin
                 ready[head[3:0]] <= `FALSE;

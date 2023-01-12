@@ -184,7 +184,7 @@ wire rob_enable_predictor;
 wire predictor_stall_if;
 wire [`OPLEN]alu_broadcast_op;
 wire predictor_enable_if;
-assign stall_IF = (rs_full==`TRUE || rob_full==`TRUE || lsb_full==`TRUE || predictor_stall_if==`TRUE || io_buffer_full == `TRUE);//如果iobuffer满了，就不能继续取指令了
+assign stall_IF = (rs_full==`TRUE || rob_full==`TRUE || lsb_full==`TRUE || predictor_stall_if==`TRUE);
 assign stall_decoder = (rs_full==`TRUE || rob_full==`TRUE || lsb_full==`TRUE);
 wire ifetch_jump_change_success_to_rob;
 

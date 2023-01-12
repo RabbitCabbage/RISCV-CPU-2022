@@ -254,7 +254,7 @@ always @(posedge clk) begin
                 end
                 `LB,`LBU,`LH,`LHU,`LW: begin
                     if(lsb_read_signal == `FALSE)begin
-                        if((destination_mem_addr[head[3:0]]!=196608 && destination_mem_addr[head[3:0]]!=196612) || ((destination_mem_addr[head[3:0]]==196608||destination_mem_addr[head[3:0]]==196612) && rob_index[head[3:0]] == rob_head) && io_buffer_full == `FALSE) begin
+                        if((destination_mem_addr[head[3:0]]!=196608 && destination_mem_addr[head[3:0]]!=196612) || ((destination_mem_addr[head[3:0]]==196608||destination_mem_addr[head[3:0]]==196612) && rob_index[head[3:0]] == rob_head && io_buffer_full == `FALSE)) begin
                             busy[head[3:0]] <= `FALSE;
                             addr_ready[head[3:0]] <= `FALSE;
                             lsb_write_signal <= `FALSE;
