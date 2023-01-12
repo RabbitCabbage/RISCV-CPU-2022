@@ -68,7 +68,8 @@ module ROB(
     output reg to_predictor_enable,
     output reg to_predictor_jump,
     output reg [`PREDICTORINDEX] to_predictor_pc,
-    input wire ifetch_jump_change_success
+    input wire ifetch_jump_change_success,
+    output wire[`ROBINDEX] rob_head
 );
 integer last_pc_from_decoder;
 reg [`ADDR] pc[`ROBSIZE];
@@ -94,6 +95,7 @@ assign to_decoder_rs1_ready = ready[decoder_fetch_rs1_index[3:0]];
 assign to_decoder_rs2_ready = ready[decoder_fetch_rs2_index[3:0]];
 assign rob_free_tag = (rob_full==`FALSE)? {1'b0,next}: 16;
 assign rob_full = (head==next && occupied == 16); 
+assign rob_head = head;
 
 integer i;
 integer debug_alu_update;

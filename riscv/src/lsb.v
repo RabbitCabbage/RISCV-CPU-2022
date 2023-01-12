@@ -61,7 +61,8 @@ module LSB(
     output reg lsb_broadcast,
     output reg [`DATALEN] lsb_cbd_value,
     output reg [`ROBINDEX] lsb_update_rename,
-    output reg lsb_full
+    output reg lsb_full,
+    input wire[`ROBINDEX] rob_head
 );
 reg                 busy[`LSBSIZE];
 reg [`ADDR]         pc[`LSBSIZE];
@@ -252,24 +253,26 @@ always @(posedge clk) begin
                 end
                 `LB,`LBU,`LH,`LHU,`LW: begin
                     if(lsb_read_signal == `FALSE)begin
-                        busy[head[3:0]] <= `FALSE;
-                        addr_ready[head[3:0]] <= `FALSE;
-                        lsb_write_signal <= `FALSE;
-                        lsb_read_signal <= `TRUE;
-                        lsb_update_rename <= rob_index[head[3:0]];
-                        to_mem_addr <= destination_mem_addr[head[3:0]];
-                        lsb_store_instr_ready <= `FALSE;
-                        case(op[head[3:0]])
-                            `LB,`LBU: begin 
-                                requiring_length <= `REQUIRE8; 
-                            end
-                            `LH,`LHU: begin 
-                                requiring_length <= `REQUIRE16;
-                            end
-                            default: begin
-                                requiring_length <= `REQUIRE32;
-                            end
-                        endcase
+                        if(destination_mem_addr[head[3:0]]!=196608||(destination_mem_addr[head[3:0]]==196608 && rob_index[head[3:0]] == rob_head)) begin
+                            busy[head[3:0]] <= `FALSE;
+                            addr_ready[head[3:0]] <= `FALSE;
+                            lsb_write_signal <= `FALSE;
+                            lsb_read_signal <= `TRUE;
+                            lsb_update_rename <= rob_index[head[3:0]];
+                            to_mem_addr <= destination_mem_addr[head[3:0]];
+                            lsb_store_instr_ready <= `FALSE;
+                            case(op[head[3:0]])
+                                `LB,`LBU: begin 
+                                    requiring_length <= `REQUIRE8; 
+                                end
+                                `LH,`LHU: begin 
+                                    requiring_length <= `REQUIRE16;
+                                end
+                                default: begin
+                                    requiring_length <= `REQUIRE32;
+                                end
+                            endcase
+                        end
                     end
                 end
                 default: begin 
