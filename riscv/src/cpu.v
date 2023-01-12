@@ -63,6 +63,7 @@ wire memctrl_success_to_icache;
 wire [`INSTRLEN] if_instr_to_decoder;
 wire [`ADDR] if_pc_to_decoder;
 wire if_success_to_decoder;
+wire if_success_to_predictor;
 
 //decoder and rs
 wire [`DATALEN]decoder_rs1_value_to_rs;
@@ -191,7 +192,7 @@ wire ifetch_jump_change_success_to_rob;
 //   assign rob_full = `FALSE;
 //   assign lsb_full = `FALSE;
 // end
-
+wire reg_finished_for_decoder;
 
 ROB rob_
     (
@@ -262,7 +263,8 @@ IF if_
       .stall_IF        (stall_IF),
       .instr_to_decode (if_instr_to_decoder),
       .pc_to_decoder   (if_pc_to_decoder),
-      .IF_success      (if_success_to_decoder),
+      .if_success_to_decoder      (if_success_to_decoder),
+      .if_success_to_predictor(if_success_to_predictor),
       .instr_pc_to_predictor(if_instr_pc_to_predictor),
       .instr_to_predictor(if_instr_to_ask_for_prediction),
       .is_jump_instr   (predictor_is_jump_instr_to_if),
@@ -317,6 +319,7 @@ Decoder decoder_
       .reg_rs2_value                (reg_rs2_value_to_decoder),
       .reg_rs1_renamed                 (reg_rs1_renamed_to_decoder),
       .reg_rs2_renamed                 (reg_rs2_renamed_to_decoder),
+      .reg_finished_for_decoder        (reg_finished_for_decoder),
       .to_reg_rs1_index             (decoder_rs1_index_to_reg),
       .to_reg_rs2_index             (decoder_rs2_index_to_reg),
       .to_reg_rd_rename             (decoder_rd_rename_to_reg),
@@ -362,7 +365,8 @@ RegFile regfile_
       .rob_enable             (rob_enable_regfile),
       .rob_commit_index       (rob_rd_index_to_reg),
       .rob_commit_rename      (rob_rd_rename_to_reg),
-      .rob_commit_value       (rob_rd_value_to_reg)
+      .rob_commit_value       (rob_rd_value_to_reg),
+      .reg_finished_for_decoder(reg_finished_for_decoder)
     );
 // RAM ram_
 //   (
@@ -504,7 +508,7 @@ Predictor predictor_
       .clk                        (clk_in),
       .rst                        (rst_in),
       .rdy                        (rdy_in),
-      .if_success                 (if_success_to_decoder),
+      .if_success                 (if_success_to_predictor),
       .if_instr_to_ask_for_prediction(if_instr_to_ask_for_prediction),
       .if_instr_pc_itself         (if_instr_pc_to_predictor),
       .rob_enable_predictor       (rob_enable_predictor),

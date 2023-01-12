@@ -1,50 +1,43 @@
 #include "io.h"
-//考察点：section 8 语句，包括if,while,for,break,continue,return等
-//算法：线性筛法求欧拉函数
-//样例输入：10
-//样例输出：
-//1
-//2
-//2
-//4
-//2
-//6
-//4
-//6
-//4
+int N = 8;
+int row[8];
+int col[8];
+int d[2][16];
 
-int N;
-int M = 0;
-int check[20];
+void printBoard() {
+    int i;
+    int j;
+    for (i = 0; i < N; i++) {
+        for (j = 0; j < N; j++) {
+            if (col[i] == j)
+                print(" O");
+            else
+                print(" .");
+        }
+        println("");
+    }
+    println("");
+    sleep(50); // to prevent UART buffer from overflowing
+}
+
+void search(int c) {
+    if (c == N) {
+        printBoard();
+    }
+    else {
+        int r;
+        for (r = 0; r < N; r++) {
+            if (row[r] == 0 && d[0][r+c] == 0 && d[1][r+N-1-c] == 0) {
+                row[r] = d[0][r+c] = d[1][r+N-1-c] = 1;
+                col[c] = r;
+                search(c+1);
+                row[r] = d[0][r+c] = d[1][r+N-1-c] = 0;
+            }
+        }
+    }
+}
 
 int main() {
-    N = 10;
-	int i = 0;
-	while ( i <= N ) check[i++] = 1;
-	int phi[15];
-	int P[15];
-	phi[1] = 1;
-	for (i = 2; ; ++i ) {
-		if ( i > N ) break;
-		if ( check[i] ) {
-			P[++M] = i;
-			phi[i] = i - 1;
-		}
-		int k = i;
-		int i;
-		for (i = 1; i <= M && (k * P[i] <= N); i++) {
-			int tmp = k * P[i];
-			if ( tmp > N ) continue;
-			check[tmp] = 0;
-			if ( k % P[i] == 0) {
-				phi[tmp] = phi[k] * P[i];
-				break;
-			}
-			else {
-				phi[k * P[i]] = phi[k] * (P[i] - 1);
-			}
-		}
-		outlln(phi[k]);
-	}
+    search(0);
     return 0;
 }

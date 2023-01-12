@@ -61,7 +61,7 @@ module ROB(
     output reg [`ROBINDEX] rob_update_rename,
     output reg [`DATALEN] rob_cbd_value,
 
-    output reg rob_full,
+    output wire rob_full,
     output reg jump_wrong,
     output reg [`ADDR] jumping_pc,
 
@@ -70,6 +70,7 @@ module ROB(
     output reg [`PREDICTORINDEX] to_predictor_pc,
     input wire ifetch_jump_change_success
 );
+integer last_pc_from_decoder;
 reg [`ADDR] pc[`ROBSIZE];
 reg [`DATALEN] rd_value[`ROBSIZE];
 reg [`ADDR] destination_mem_addr[`ROBSIZE];
@@ -92,6 +93,7 @@ assign to_decoder_rs2_value = rd_value[decoder_fetch_rs2_index[3:0]];
 assign to_decoder_rs1_ready = ready[decoder_fetch_rs1_index[3:0]];
 assign to_decoder_rs2_ready = ready[decoder_fetch_rs2_index[3:0]];
 assign rob_free_tag = (rob_full==`FALSE)? {1'b0,next}: 16;
+assign rob_full = (head==next && occupied == 16); 
 
 integer i;
 integer debug_alu_update;
@@ -105,11 +107,12 @@ wire[`INSTRLEN] debug_instr;
 assign debug_instr = instr[head[3:0]];
 reg alu_need_update;
 reg lsb_need_update;
-// integer out_file;
+integer out_file;
 
 initial begin
-    // out_file <= $fopen("../test.txt","w");
-    rob_full <= `FALSE;
+    out_file <= $fopen("../test.txt","w");
+    last_pc_from_decoder <= -1;
+    // rob_full <= `FALSE;
     head <= 0;//定一个很特殊的初始状态
     next <= 0;
     debug_alu_update <= 0;
@@ -142,6 +145,7 @@ always @(posedge clk) begin
         if (ifetch_jump_change_success == `TRUE) begin
             jump_wrong <= `FALSE;
         end
+        last_pc_from_decoder <= -1;
         //jump wrong 的时候这些信息得记下来，因为指令还得执行，不能赋成null
         // to_reg_rd <= `NULL5;
         // enable_reg <=  `FALSE;
@@ -154,7 +158,7 @@ always @(posedge clk) begin
         //jumping_pc <= `NULL32;
     end else if(rdy == `TRUE && jump_wrong == `FALSE) begin
         //commit the first instr;
-        rob_full = (next == head && occupied == 16);
+        // rob_full = (next == head && occupied == 16);
        if(ready[head[3:0]]==`TRUE && occupied != 0 && rob_enable_lsb_write==`FALSE && rob_broadcast == `FALSE) begin//同时要检查这个rob不空
             debug_rob_commit <= debug_rob_commit + 1;
            // $write(debug_rob_commit,"\n");
@@ -222,122 +226,122 @@ always @(posedge clk) begin
                     rob_update_rename <= {1'b0,head[3:0]};
                end
            endcase
-                // case(op[head[3:0]])
-                //     `LB: begin
-                //         $fdisplay(out_file,"%h\tlb\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `LH: begin
-                //         $fdisplay(out_file,"%h\tlh\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `LW: begin
-                //         $fdisplay(out_file,"%h\tlw\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `LBU: begin
-                //         $fdisplay(out_file,"%h\tlbu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `LHU: begin
-                //         $fdisplay(out_file,"%h\tlhu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SB: begin
-                //         $fdisplay(out_file,"%h\tsb\t%d",instr[head[3:0]],destination_mem_addr[head[3:0]]);
-                //     end
-                //     `SH: begin
-                //         $fdisplay(out_file,"%h\tsh\t%d",instr[head[3:0]],destination_mem_addr[head[3:0]]);
-                //     end
-                //     `SW: begin
-                //         $fdisplay(out_file,"%h\tsw\t%d",instr[head[3:0]],destination_mem_addr[head[3:0]]);
-                //     end
-                //     `LUI: begin
-                //         $fdisplay(out_file,"%h\tlui\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `AUIPC: begin
-                //         $fdisplay(out_file,"%h\tauipc\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SUB: begin
-                //         $fdisplay(out_file,"%h\tsub\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `ADD: begin
-                //         $fdisplay(out_file,"%h\tadd\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `ADDI: begin
-                //         $fdisplay(out_file,"%h\taddi\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `XOR: begin
-                //         $fdisplay(out_file,"%h\txor\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `XORI: begin
-                //         $fdisplay(out_file,"%h\txori\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `OR: begin
-                //         $fdisplay(out_file,"%h\tor\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `ORI: begin
-                //         $fdisplay(out_file,"%h\tori\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `AND: begin
-                //         $fdisplay(out_file,"%h\tand\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `ANDI: begin
-                //         $fdisplay(out_file,"%h\tandi\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SLL: begin
-                //         $fdisplay(out_file,"%h\tsll\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SLLI: begin
-                //         $fdisplay(out_file,"%h\tslli\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SRL: begin
-                //         $fdisplay(out_file,"%h\tsrl\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SRLI: begin
-                //         $fdisplay(out_file,"%h\tsrli\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SRA: begin
-                //         $fdisplay(out_file,"%h\tsra\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SRAI: begin
-                //         $fdisplay(out_file,"%h\tsrai\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SLTI: begin
-                //         $fdisplay(out_file,"%h\tslti\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SLTIU: begin
-                //         $fdisplay(out_file,"%h\tsltiu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SLT: begin
-                //         $fdisplay(out_file,"%h\tslt\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `SLTU: begin
-                //         $fdisplay(out_file,"%h\tsltu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
-                //     end
-                //     `BEQ: begin
-                //         $fdisplay(out_file,"%h\tbeq",instr[head[3:0]]);
-                //     end
-                //     `BNE: begin
-                //         $fdisplay(out_file,"%h\tbne",instr[head[3:0]]);
-                //     end
-                //     `BLT: begin
-                //         $fdisplay(out_file,"%h\tblt",instr[head[3:0]]);
-                //     end
-                //     `BGE: begin
-                //         $fdisplay(out_file,"%h\tbge",instr[head[3:0]]);
-                //     end
-                //     `BLTU: begin
-                //         $fdisplay(out_file,"%h\tbltu",instr[head[3:0]]);
-                //     end
-                //     `BGEU: begin
-                //         $fdisplay(out_file,"%h\tbgeu",instr[head[3:0]]);
-                //     end
-                //     `JAL: begin
-                //         $fdisplay(out_file,"%h\tjal",instr[head[3:0]]);
-                //     end
-                //     `JALR: begin
-                //         $fdisplay(out_file,"%h\tjalr",instr[head[3:0]]);
-                //     end      
-                //     default begin
-                //     end
-                // endcase
-                    // case(op[head[3:0]])
+            case(op[head[3:0]])
+                    `LB: begin
+                        $fdisplay(out_file,"%h\tlb\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `LH: begin
+                        $fdisplay(out_file,"%h\tlh\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `LW: begin
+                        $fdisplay(out_file,"%h\tlw\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `LBU: begin
+                        $fdisplay(out_file,"%h\tlbu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `LHU: begin
+                        $fdisplay(out_file,"%h\tlhu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SB: begin
+                        $fdisplay(out_file,"%h\tsb\t%d",instr[head[3:0]],destination_mem_addr[head[3:0]]);
+                    end
+                    `SH: begin
+                        $fdisplay(out_file,"%h\tsh\t%d",instr[head[3:0]],destination_mem_addr[head[3:0]]);
+                    end
+                    `SW: begin
+                        $fdisplay(out_file,"%h\tsw\t%d",instr[head[3:0]],destination_mem_addr[head[3:0]]);
+                    end
+                    `LUI: begin
+                        $fdisplay(out_file,"%h\tlui\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `AUIPC: begin
+                        $fdisplay(out_file,"%h\tauipc\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SUB: begin
+                        $fdisplay(out_file,"%h\tsub\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `ADD: begin
+                        $fdisplay(out_file,"%h\tadd\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `ADDI: begin
+                        $fdisplay(out_file,"%h\taddi\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `XOR: begin
+                        $fdisplay(out_file,"%h\txor\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `XORI: begin
+                        $fdisplay(out_file,"%h\txori\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `OR: begin
+                        $fdisplay(out_file,"%h\tor\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `ORI: begin
+                        $fdisplay(out_file,"%h\tori\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `AND: begin
+                        $fdisplay(out_file,"%h\tand\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `ANDI: begin
+                        $fdisplay(out_file,"%h\tandi\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SLL: begin
+                        $fdisplay(out_file,"%h\tsll\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SLLI: begin
+                        $fdisplay(out_file,"%h\tslli\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SRL: begin
+                        $fdisplay(out_file,"%h\tsrl\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SRLI: begin
+                        $fdisplay(out_file,"%h\tsrli\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SRA: begin
+                        $fdisplay(out_file,"%h\tsra\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SRAI: begin
+                        $fdisplay(out_file,"%h\tsrai\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SLTI: begin
+                        $fdisplay(out_file,"%h\tslti\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SLTIU: begin
+                        $fdisplay(out_file,"%h\tsltiu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SLT: begin
+                        $fdisplay(out_file,"%h\tslt\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `SLTU: begin
+                        $fdisplay(out_file,"%h\tsltu\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
+                    end
+                    `BEQ: begin
+                        $fdisplay(out_file,"%h\tbeq",instr[head[3:0]]);
+                    end
+                    `BNE: begin
+                        $fdisplay(out_file,"%h\tbne",instr[head[3:0]]);
+                    end
+                    `BLT: begin
+                        $fdisplay(out_file,"%h\tblt",instr[head[3:0]]);
+                    end
+                    `BGE: begin
+                        $fdisplay(out_file,"%h\tbge",instr[head[3:0]]);
+                    end
+                    `BLTU: begin
+                        $fdisplay(out_file,"%h\tbltu",instr[head[3:0]]);
+                    end
+                    `BGEU: begin
+                        $fdisplay(out_file,"%h\tbgeu",instr[head[3:0]]);
+                    end
+                    `JAL: begin
+                        $fdisplay(out_file,"%h\tjal",instr[head[3:0]]);
+                    end
+                    `JALR: begin
+                        $fdisplay(out_file,"%h\tjalr",instr[head[3:0]]);
+                    end      
+                    default begin
+                    end
+            endcase
+            // case(op[head[3:0]])
                     //     `LB: begin
                     //         $display("%h\tlb\t%d\t%d",instr[head[3:0]],destination_reg_index[head[3:0]],rd_value[head[3:0]]);
                     //     end
@@ -484,8 +488,9 @@ always @(posedge clk) begin
            ready[lsb_update_rename[3:0]] <= `TRUE;
            lsb_need_update<=`FALSE;
        end
-       if(decoder_input_enable == `TRUE &&occupied!=16)begin
+       if(decoder_input_enable == `TRUE &&occupied!=16 && last_pc_from_decoder != decoder_pc)begin
            pc[next] <= decoder_pc;
+           last_pc_from_decoder <= decoder_pc;
            destination_reg_index[next] <= decoder_destination_reg_index;
            op[next] <= decoder_op;
            instr[next] <= decoder_instr;
@@ -500,11 +505,11 @@ always @(posedge clk) begin
            //occupied <= occupied + 1;
         end
         if(ready[head[3:0]]==`TRUE && occupied != 0 && rob_enable_lsb_write==`FALSE && rob_broadcast == `FALSE) begin
-            if(decoder_input_enable == `FALSE || occupied == 16) begin
+            if(decoder_input_enable == `FALSE || occupied == 16||last_pc_from_decoder== decoder_pc) begin//那么就不能放进去
                 occupied <= occupied - 1;
             end
         end else begin
-            if(decoder_input_enable == `TRUE && occupied != 16) begin
+            if(decoder_input_enable == `TRUE &&occupied!=16 && last_pc_from_decoder != decoder_pc) begin
                 occupied <= occupied + 1;
             end
         end
