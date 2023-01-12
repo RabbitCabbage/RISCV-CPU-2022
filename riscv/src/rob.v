@@ -105,8 +105,6 @@ assign debug_9_ready = ready[9];
 assign debug_head_ready = ready[head[3:0]];
 wire[`INSTRLEN] debug_instr;
 assign debug_instr = instr[head[3:0]];
-reg alu_need_update;
-reg lsb_need_update;
 integer out_file;
 
 initial begin
@@ -126,8 +124,6 @@ initial begin
         rob_cbd_value <= `NULL32;
         jump_wrong <= `FALSE;
         jumping_pc <= `NULL32;
-    alu_need_update <= `FALSE;
-    lsb_need_update <= `FALSE;
 end
 //store 操作需要addr以及相关的数据，也就是rs2，所以一个store操作只要有了addr有了rs2就可以执行了
 always @(posedge clk) begin
@@ -476,17 +472,15 @@ always @(posedge clk) begin
             ready[lsb_ready_store_instr_rename] <= `TRUE;
             rd_value[lsb_ready_store_instr_rename] <= lsb_store_value;
         end
-       if(alu_broadcast == `TRUE && alu_need_update==`TRUE) begin
+       if(alu_broadcast == `TRUE) begin
            rd_value[alu_update_rename[3:0]] <= alu_cbd_value;
            ready[alu_update_rename[3:0]] <= `TRUE;
            jump_pc[alu_update_rename[3:0]] <= alu_jumping_pc;
            debug_alu_update <= debug_alu_update + 1;
-           alu_need_update <= `FALSE;
        end 
-       if(lsb_broadcast == `TRUE&&lsb_need_update==`TRUE) begin//lsb广播的是lsb load得到的数据
+       if(lsb_broadcast == `TRUE) begin//lsb广播的是lsb load得到的数据
            rd_value[lsb_update_rename[3:0]] <= lsb_cbd_value;
            ready[lsb_update_rename[3:0]] <= `TRUE;
-           lsb_need_update<=`FALSE;
        end
        if(decoder_input_enable == `TRUE &&occupied!=16 && last_pc_from_decoder != decoder_pc)begin
            pc[next] <= decoder_pc;
@@ -514,12 +508,6 @@ always @(posedge clk) begin
             end
         end
     end
-end
-always @(posedge alu_broadcast) begin
-    alu_need_update <= `TRUE;  
-end 
-always @(posedge lsb_broadcast) begin//lsb广播的是lsb load得到的数据
-    lsb_need_update <= `TRUE;
 end
 endmodule
 `endif
