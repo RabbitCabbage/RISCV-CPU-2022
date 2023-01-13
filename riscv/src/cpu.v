@@ -402,7 +402,7 @@ MemCtrl memctrl_
       .mem_addr           (mem_a),
       .mem_byte_write     (mem_dout),
       .mem_byte_read      (mem_din),
-      .read_write         (mem_wr),
+      .rw_to_ram         (mem_wr),
       .mem_enable         (memctrl_enable_ram)//todo
     );
 ALU alu_

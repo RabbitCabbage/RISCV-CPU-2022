@@ -35,11 +35,12 @@ module MemCtrl (
     output reg [`ADDR] mem_addr,
     output reg [`BYTELEN] mem_byte_write,
     input wire [`BYTELEN] mem_byte_read,
-    output reg read_write,
+    output reg rw_to_ram,
     output reg mem_enable
     );
 
 reg working;
+reg working_rw;
 reg for_lsb_ic;//0 for lsb, 1 for icache;
 reg [`ADDR] start_addr;
 reg [`ADDR] new_addr;
@@ -71,8 +72,8 @@ always @(posedge clk) begin
         end
         if(working==`TRUE) begin
             // 如果是向IO进行读写就不应该再把地址加一加二操作了。
-            if(mem_addr[17:16]==2'b11) begin
-                if(lsb_read_signal==`TRUE) begin //I/O read
+            if(start_addr[17:16]==2'b11) begin
+                if(working_rw == `READ) begin //I/O read
                 //load word/half word/ byte
                     if(finished == requiring_len) begin
                         //requiring length has been read
@@ -144,6 +145,8 @@ always @(posedge clk) begin
                             mem_enable <= `FALSE;
                             mem_byte_write <= `NULL8;
                             count_after_finish <= 1;
+                            rw_to_ram <= `READ;
+                            mem_addr <= `NULL32;
                         end else if(count_after_finish == 1) begin
                             icache_success <= `FALSE;
                             lsb_store_success <= `FALSE;
@@ -185,7 +188,7 @@ always @(posedge clk) begin
                 end
             end
             else begin
-                if(read_write == `READ) begin //read
+                if(working_rw == `READ) begin //read
                     if(finished == requiring_len) begin
                         //requiring length has been read
                         if(for_lsb_ic == 0) begin 
@@ -255,7 +258,9 @@ always @(posedge clk) begin
                         working                      <= `FALSE;
                         //mem_addr                     <= start_addr
                         mem_enable                   <= `FALSE;
-                        //mem_byte_write               <= `NULL8;
+                        rw_to_ram                   <= `READ;
+                        mem_byte_write               <= `NULL8;
+                        mem_addr                     <= `NULL32;
                     end else begin
                         case(finished)
                             3'b000: begin
@@ -289,13 +294,14 @@ always @(posedge clk) begin
                 if(lsb_read_signal == `TRUE) begin
                     ultimate_data                    <= `NULL32;
                     working                          <= `TRUE;
+                    working_rw                       <= `READ;
                     for_lsb_ic                       <= 1'b0;
                     //start_addr                       <= lsb_addr;
                     mem_addr                         <= new_addr;
                     start_addr                       <= new_addr;
                     new_addr_assigned_to_start_addr  <= `TRUE;
                     mem_enable                       <= `TRUE;
-                    read_write                       <= `READ;
+                    rw_to_ram                       <= `READ;
                     debug_wr_change <= 2;
                     //先读进来一个byte
                     requiring_len                    <= lsb_len;
@@ -306,9 +312,10 @@ always @(posedge clk) begin
                 end else begin
                     //ultimate_data                    <= `NULL32;
                     working                          <= `TRUE;
+                    working_rw                       <= `WRITE;
                     for_lsb_ic                       <= 1'b0;
                     //start_addr                       <= lsb_addr;
-                    read_write                       <= `WRITE;
+                    rw_to_ram                       <= `WRITE;
                     debug_wr_change <= 3;
                     requiring_len                    <= lsb_len;
                     finished                         <= 3'b000;
@@ -327,9 +334,10 @@ always @(posedge clk) begin
                 icache_read_instr                    <= `NULL32;
                 ultimate_data                        <= `NULL32;
                 working                              <= `TRUE;
+                working_rw                              <= `READ;
                 for_lsb_ic                           <= 1'b1;//working for icache;
                 //start_addr                           <= icache_addr;
-                read_write                           <= `READ;
+                rw_to_ram                           <= `READ;
                 mem_addr                             <= new_addr;//先读进来一个byte
                 start_addr                           <= new_addr;
                 new_addr_assigned_to_start_addr      <= `TRUE;

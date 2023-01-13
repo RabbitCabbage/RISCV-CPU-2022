@@ -1,43 +1,45 @@
 #include "io.h"
-int N = 8;
-int row[8];
-int col[8];
-int d[2][16];
+// Target: qsort
+// Possible optimization: Dead code elimination, common expression, strength reduction
+// REMARKS: nothing.
+//
+//
 
-void printBoard() {
-    int i;
-    int j;
-    for (i = 0; i < N; i++) {
-        for (j = 0; j < N; j++) {
-            if (col[i] == j)
-                print(" O");
-            else
-                print(" .");
-        }
-        println("");
-    }
-    println("");
-    sleep(50); // to prevent UART buffer from overflowing
-}
+//int a[10100];
+int a[205];
+int n = 200;
 
-void search(int c) {
-    if (c == N) {
-        printBoard();
-    }
-    else {
-        int r;
-        for (r = 0; r < N; r++) {
-            if (row[r] == 0 && d[0][r+c] == 0 && d[1][r+N-1-c] == 0) {
-                row[r] = d[0][r+c] = d[1][r+N-1-c] = 1;
-                col[c] = r;
-                search(c+1);
-                row[r] = d[0][r+c] = d[1][r+N-1-c] = 0;
-            }
+int qsrt(int l, int r) {
+    int i = l;
+    int j = r;
+    int x = a[(l + r) / 2];
+    while (i <= j) {
+        while (a[i] < x) i++;
+        while (a[j] > x) j--;
+        if (i <= j) {
+            int temp = a[i];
+            a[i] = a[j];
+            a[j] = temp;
+            i++;
+            j--;
         }
     }
+    if (l < j) qsrt(l, j);
+    if (i < r) qsrt(i, r);
+    return 0;
 }
 
 int main() {
-    search(0);
+    int i;
+    for (i = 1; i <= n; i++)
+        a[i] = n + 1 - i;
+    qsrt(1, n);
+    for (i = 1; i <= n; i++) {
+		outl(a[i]);
+		print(" ");
+        sleep(1); // to prevent UART buffer from overflowing
+	}
+    print("\n");
     return 0;
 }
+
